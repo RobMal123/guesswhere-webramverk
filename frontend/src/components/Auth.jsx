@@ -15,7 +15,7 @@ function Auth({ onLogin }) {
 
     try {
       if (isLogin) {
-        // Login request - use FormData for OAuth2 password flow
+        // Login request
         const formBody = new URLSearchParams();
         formBody.append('username', formData.username);
         formBody.append('password', formData.password);
@@ -35,7 +35,7 @@ function Auth({ onLogin }) {
         }
 
         localStorage.setItem('token', data.access_token);
-        onLogin();
+        onLogin({ token: data.access_token });
       } else {
         // Registration request
         const response = await fetch('http://localhost:8000/users/', {
@@ -52,7 +52,7 @@ function Auth({ onLogin }) {
           throw new Error(data.detail || 'Registration failed');
         }
 
-        setIsLogin(true); // Switch to login after successful registration
+        setIsLogin(true);
       }
     } catch (error) {
       setError(error.message);

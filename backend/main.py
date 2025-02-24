@@ -16,6 +16,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from utils import calculate_distance, calculate_score
 from fastapi.staticfiles import StaticFiles
+from schemas import LocationCategory
 
 
 load_dotenv()
@@ -88,23 +89,36 @@ async def get_current_user(
 # Public endpoints (no authentication required)
 @app.post("/locations/", response_model=schemas.Location)
 async def create_location(
-    latitude: float,
-    longitude: float,
+    latitude: float = Form(...),
+    longitude: float = Form(...),
+    category: LocationCategory = Form(default=LocationCategory.OTHER),
     image: UploadFile = File(...),
+    current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    # Save image to disk
-    file_location = f"images/{image.filename}"
-    with open(file_location, "wb+") as file_object:
-        file_object.write(await image.read())
+    if not current_user or not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
+        )
 
-    # Create location in database
+    # Create images directory if it doesn't exist
+    if not os.path.exists("images"):
+        os.makedirs("images")
+
+    # Save the image
+    file_name = f"images/{image.filename}"
+    with open(file_name, "wb") as buffer:
+        buffer.write(await image.read())
+
+    # Create new location
     db_location = models.Location(
-        image_url=file_location, latitude=latitude, longitude=longitude
+        latitude=latitude, longitude=longitude, image_url=file_name, category=category
     )
+
     db.add(db_location)
     db.commit()
     db.refresh(db_location)
+
     return db_location
 
 
@@ -305,3 +319,43 @@ async def get_admin_locations(
 
     locations = db.query(models.Location).all()
     return locations
+
+
+@app.get("/check-admin")
+async def check_admin_status(current_user: models.User = Depends(get_current_user)):
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated"
+        )
+
+    return {"is_admin": current_user.is_admin}
+
+
+@app.delete("/admin/locations/{location_id}")
+async def delete_location(
+    location_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not current_user or not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
+        )
+
+    location = (
+        db.query(models.Location).filter(models.Location.id == location_id).first()
+    )
+    if not location:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Location not found"
+        )
+
+    # Delete the image file
+    if os.path.exists(location.image_url):
+        os.remove(location.image_url)
+
+    # Delete the database record
+    db.delete(location)
+    db.commit()
+
+    return {"message": "Location deleted successfully"}

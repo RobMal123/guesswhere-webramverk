@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Auth from './components/Auth';
 import Quiz from './components/Quiz';
 import Admin from './components/Admin';
@@ -9,9 +9,39 @@ function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
 
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const response = await fetch('http://localhost:8000/check-admin', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (response.ok) {
+            const userData = await response.json();
+            setIsAuthenticated(true);
+            setIsAdmin(userData.is_admin || false);
+          } else {
+            localStorage.removeItem('token');
+          }
+        } catch (error) {
+          console.error('Error checking auth status:', error);
+          localStorage.removeItem('token');
+        }
+      }
+    };
+
+    checkAuthStatus();
+  }, []);
+
   const handleLogin = (userData) => {
-    setIsAuthenticated(true);
-    setIsAdmin(userData.is_admin);
+    if (userData) {
+      setIsAuthenticated(true);
+      setIsAdmin(userData.is_admin || false);
+    }
   };
 
   if (!isAuthenticated) {
@@ -32,6 +62,8 @@ function App() {
             <button onClick={() => {
               localStorage.removeItem('token');
               setIsAuthenticated(false);
+              setIsAdmin(false);
+              setShowAdmin(false);
             }}>
               Logout
             </button>

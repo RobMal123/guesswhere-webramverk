@@ -13,10 +13,24 @@ function Admin() {
   const [newLocation, setNewLocation] = useState({
     latitude: '',
     longitude: '',
-    image: null
+    image: null,
+    category: 'landmark'  // Default category
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const categories = [
+    'landmark',
+    'nature',
+    'city',
+    'building',
+    'park',
+    'beach',
+    'mountain',
+    "castle",
+    "bridge",
+    'other'
+  ];
 
   useEffect(() => {
     fetchDashboardData();
@@ -64,6 +78,7 @@ function Admin() {
       formData.append('latitude', newLocation.latitude);
       formData.append('longitude', newLocation.longitude);
       formData.append('image', newLocation.image);
+      formData.append('category', newLocation.category);  // Add category to form data
 
       const token = localStorage.getItem('token');
       const response = await fetch('http://localhost:8000/locations/', {
@@ -75,11 +90,48 @@ function Admin() {
       });
 
       if (response.ok) {
-        fetchDashboardData(); // Refresh data
-        setNewLocation({ latitude: '', longitude: '', image: null });
+        fetchDashboardData();
+        setNewLocation({ 
+          latitude: '', 
+          longitude: '', 
+          image: null, 
+          category: 'landmark' 
+        });
       }
     } catch (error) {
       setError('Failed to add location');
+    }
+  };
+
+  const handleDeleteLocation = async (locationId) => {
+    if (!window.confirm('Are you sure you want to delete this location?')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8000/admin/locations/${locationId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        // Update the locations list after successful deletion
+        setLocations(locations.filter(loc => loc.id !== locationId));
+        // Update the stats
+        setStats(prev => ({
+          ...prev,
+          totalLocations: prev.totalLocations - 1
+        }));
+      } else {
+        throw new Error('Failed to delete location');
+      }
+    } catch (error) {
+      setError('Failed to delete location');
+      console.error('Error deleting location:', error);
     }
   };
 
@@ -129,6 +181,17 @@ function Admin() {
               onChange={(e) => setNewLocation({...newLocation, longitude: e.target.value})}
               required
             />
+            <select
+              value={newLocation.category}
+              onChange={(e) => setNewLocation({...newLocation, category: e.target.value})}
+              required
+            >
+              {categories.map(category => (
+                <option key={category} value={category}>
+                  {category.charAt(0).toUpperCase() + category.slice(1)}
+                </option>
+              ))}
+            </select>
             <input
               type="file"
               onChange={(e) => setNewLocation({...newLocation, image: e.target.files[0]})}
@@ -144,6 +207,15 @@ function Admin() {
                 <img src={`http://localhost:8000/${location.image_url}`} alt="Location" />
                 <p>Lat: {location.latitude}</p>
                 <p>Long: {location.longitude}</p>
+                <p className="location-category">
+                  Category: {location.category.charAt(0).toUpperCase() + location.category.slice(1)}
+                </p>
+                <button 
+                  className="delete-button"
+                  onClick={() => handleDeleteLocation(location.id)}
+                >
+                  Delete
+                </button>
               </div>
             ))}
           </div>

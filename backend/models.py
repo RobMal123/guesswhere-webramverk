@@ -34,6 +34,9 @@ class Location(Base):
     image_url = Column(String)
     latitude = Column(Float)
     longitude = Column(Float)
+    description = Column(Text, nullable=True)
+    category = Column(String(50), nullable=False, default="other")
+    created_at = Column(TIMESTAMP(timezone=True), server_default="now()")
 
 
 class Score(Base):
