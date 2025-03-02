@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, F
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from sqlalchemy import func, desc
 import models
 import schemas
@@ -17,6 +17,8 @@ from passlib.context import CryptContext
 from utils import calculate_distance, calculate_score
 from fastapi.staticfiles import StaticFiles
 from schemas import LocationCategory
+from sqlalchemy.exc import SQLAlchemyError
+import logging
 
 
 load_dotenv()
@@ -24,6 +26,18 @@ load_dotenv()
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+
+# Update the CORS middleware configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:3000",
+    ],  # Add any other frontend URLs you're using
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Security configurations
 SECRET_KEY = "your-secret-key"  # Change this!
@@ -34,15 +48,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="login",  # Changed to match the endpoint below
     auto_error=False,
-)
-
-# Update the CORS middleware configuration
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Your frontend URL
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
 )
 
 # Create images directory if it doesn't exist
@@ -123,32 +128,94 @@ async def create_location(
 
 
 @app.get("/locations/random", response_model=schemas.Location)
-async def get_random_location(db: Session = Depends(get_db)):
-    locations = db.query(models.Location).all()
-    if not locations:
-        raise HTTPException(status_code=404, detail="No locations found")
-    return random.choice(locations)
+async def get_random_location(
+    category: Optional[str] = None,
+    exclude: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    try:
+        query = db.query(models.Location)
+
+        # Filter by category if specified and not random
+        if category and category != "random":
+            query = query.filter(models.Location.category == category)
+
+        # Handle multiple excluded IDs
+        if exclude:
+            excluded_ids = [int(id) for id in exclude.split(",")]
+            query = query.filter(~models.Location.id.in_(excluded_ids))
+
+        locations = query.all()
+        if not locations:
+            # If no locations found (possibly because all were excluded),
+            # try again without the exclusion
+            if exclude:
+                query = db.query(models.Location)
+                if category and category != "random":
+                    query = query.filter(models.Location.category == category)
+                locations = query.all()
+
+            if not locations:
+                raise HTTPException(
+                    status_code=404,
+                    detail="No locations found for the specified category",
+                )
+
+        return random.choice(locations)
+    except Exception as e:
+        logger.error(f"Error fetching random location: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error fetching random location")
+
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 @app.get("/leaderboard/", response_model=List[schemas.LeaderboardEntry])
 def get_leaderboard(db: Session = Depends(get_db)):
-    top_scores = (
-        db.query(
-            models.Score,
-            models.User.username,
-            func.sum(models.Score.score).label("total_score"),
+    try:
+        # Get total scores and number of games (every 5 rounds = 1 game) for each user
+        top_scores = (
+            db.query(
+                models.User.id,
+                models.User.username,
+                func.sum(models.Score.score).label("total_score"),
+                func.ceil(func.count(models.Score.id) / 5.0).label("games_played"),
+            )
+            .outerjoin(models.Score)
+            .group_by(models.User.id, models.User.username)
+            .having(func.count(models.Score.id) > 0)  # Only show users who have played
+            .order_by(
+                desc(
+                    func.sum(models.Score.score)
+                    / func.ceil(func.count(models.Score.id) / 5.0)
+                )
+            )  # Order by average score per game
+            .limit(10)
+            .all()
         )
-        .join(models.User)
-        .group_by(models.User.id)
-        .order_by(desc("total_score"))
-        .limit(10)
-        .all()
-    )
 
-    return [
-        {"username": score.username, "score": score.total_score, "id": score.Score.id}
-        for score in top_scores
-    ]
+        result = [
+            {
+                "id": entry[0],
+                "username": entry[1],
+                "score": round(
+                    float(entry[2] or 0) / float(entry[3] or 1)
+                ),  # Average score per game
+                "games_played": int(entry[3] or 0),
+            }
+            for entry in top_scores
+        ]
+
+        return result
+
+    except SQLAlchemyError as e:
+        logger.error(f"Database error in leaderboard: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database error while fetching leaderboard",
+        )
 
 
 # Protected endpoints (authentication required)

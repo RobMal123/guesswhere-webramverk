@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import Map from './Map';
 
-function Quiz() {
+function Quiz({ category, onGameComplete }) {
   const [currentImage, setCurrentImage] = useState(null);
   const [showResult, setShowResult] = useState(false);
   const [score, setScore] = useState(0);
+  const [totalScore, setTotalScore] = useState(0);
   const [distance, setDistance] = useState(null);
   const [correctLocation, setCorrectLocation] = useState(null);
   const [guessedLocation, setGuessedLocation] = useState(null);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [locationId, setLocationId] = useState(null);
+  const [usedLocationIds, setUsedLocationIds] = useState([]);
+  const [roundNumber, setRoundNumber] = useState(1);
+  const TOTAL_ROUNDS = 5;
 
   useEffect(() => {
     // Check if user is logged in
@@ -19,17 +23,31 @@ function Quiz() {
       setError('Please log in to play');
       return;
     }
-    fetchNewLocation();
+    fetchLocation();
   }, []);
 
-  const fetchNewLocation = async () => {
+  const fetchLocation = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('http://localhost:8000/locations/random');
+      // Add all used location IDs to the exclude parameter
+      const excludeParam = usedLocationIds.length > 0 
+        ? `&exclude=${usedLocationIds.join(',')}`
+        : '';
+      
+      const baseUrl = category === 'random' 
+        ? 'http://localhost:8000/locations/random'
+        : `http://localhost:8000/locations/random?category=${category}`;
+      
+      const url = `${baseUrl}${excludeParam}`;
+        
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error('Failed to fetch location');
       }
       const data = await response.json();
+      
+      // Add the new location ID to the used locations array
+      setUsedLocationIds(prev => [...prev, data.id]);
       setCurrentImage(data.image_url);
       setCorrectLocation([data.latitude, data.longitude]);
       setLocationId(data.id);
@@ -70,6 +88,7 @@ function Quiz() {
 
       const data = await response.json();
       setScore(data.score);
+      setTotalScore(prevTotal => prevTotal + data.score);
       setDistance(data.distance);
       setShowResult(true);
     } catch (error) {
@@ -78,11 +97,26 @@ function Quiz() {
     }
   };
 
+  const handleNextRound = () => {
+    if (roundNumber >= TOTAL_ROUNDS) {
+      // Game complete
+      onGameComplete(totalScore);
+    } else {
+      setRoundNumber(prev => prev + 1);
+      fetchLocation();
+    }
+  };
+
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
 
   return (
     <div className="quiz-container">
+      <div className="game-info p-4">
+        <div className="text-lg font-bold">Round {roundNumber} of {TOTAL_ROUNDS}</div>
+        <div>Total Score: {totalScore}</div>
+      </div>
+
       {currentImage && (
         <div className="image-container">
           <img 
@@ -103,9 +137,14 @@ function Quiz() {
       
       {showResult && (
         <div className="result-container">
-          <h2>Score: {score} points</h2>
+          <h2>Round Score: {score} points</h2>
           <p>You were {distance} km away from the target!</p>
-          <button onClick={fetchNewLocation}>Next Location</button>
+          <button 
+            onClick={handleNextRound}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            {roundNumber >= TOTAL_ROUNDS ? 'Finish Game' : 'Next Location'}
+          </button>
         </div>
       )}
     </div>
