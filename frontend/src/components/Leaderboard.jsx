@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import '../styles/Leaderboard.css';
 
-function Leaderboard() {
+function Leaderboard({ category }) {
   const [leaderboardData, setLeaderboardData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -26,7 +27,25 @@ function Leaderboard() {
           throw new Error(data.detail || `Failed to fetch leaderboard: ${response.status}`);
         }
 
-        setLeaderboardData(Array.isArray(data) ? data : []);
+        // Log the raw data to check what we're receiving
+        console.log('Raw leaderboard data:', data);
+
+        // Calculate average score for each entry
+        const processedData = data.map(entry => {
+          const averageScore = entry.games_played > 0 
+            ? (entry.total_score / (entry.games_played * 5)) * 100 
+            : 0;
+          
+          return {
+            ...entry,
+            average_score: Math.round(averageScore)
+          };
+        });
+
+        // Log the processed data to verify calculations
+        console.log('Processed leaderboard data:', processedData);
+
+        setLeaderboardData(processedData);
       } catch (error) {
         console.error('Leaderboard fetch error:', error);
         setError(error.message);
@@ -59,41 +78,35 @@ function Leaderboard() {
 
   if (!leaderboardData.length) {
     return (
-      <div className="p-6 max-w-2xl mx-auto">
-        <h2 className="text-2xl font-bold mb-6 text-center">Top Players</h2>
+      <div className="leaderboard-container">
+        <h2 className="leaderboard-title">Leaderboard - {category || 'All Categories'}</h2>
         <p className="text-center text-gray-600">No scores recorded yet.</p>
       </div>
     );
   }
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6 text-center">Top Players</h2>
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full">
-          <thead className="bg-gray-50">
+    <div className="leaderboard-container">
+      <h2 className="leaderboard-title">Leaderboard - {category || 'All Categories'}</h2>
+      <div className="leaderboard-table-container">
+        <table className="leaderboard-table">
+          <thead>
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Player</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Score</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Games</th>
+              <th>Rank</th>
+              <th>Player</th>
+              <th>Average Score</th>
+              <th>Total Score</th>
+              <th>Games</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody>
             {leaderboardData.map((entry, index) => (
-              <tr key={entry.id} className={index < 3 ? 'bg-yellow-50' : ''}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">#{index + 1}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{entry.username}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{Math.round(entry.score)}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{entry.games_played}</div>
-                </td>
+              <tr key={entry.id}>
+                <td>#{index + 1}</td>
+                <td>{entry.username}</td>
+                <td>{entry.average_score}%</td>
+                <td>{entry.total_score}</td>
+                <td>{entry.games_played}</td>
               </tr>
             ))}
           </tbody>

@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from 'react';
+import { Routes, Route, useNavigate, BrowserRouter, Navigate } from 'react-router-dom';
 import Auth from './components/Auth';
 import Quiz from './components/Quiz';
 import Admin from './components/Admin';
 import Leaderboard from './components/Leaderboard';
 import CategorySelection from './components/CategorySelection';
+import Navbar from './components/Navbar';
 import './styles/main.css';
 
-function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+function AppContent() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [showAdmin, setShowAdmin] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [gameComplete, setGameComplete] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
   const [averageScore, setAverageScore] = useState(0);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const checkAuthStatus = async () => {
@@ -28,7 +30,7 @@ function App() {
           
           if (response.ok) {
             const userData = await response.json();
-            setIsAuthenticated(true);
+            setIsLoggedIn(true);
             setIsAdmin(userData.is_admin || false);
           } else {
             localStorage.removeItem('token');
@@ -45,19 +47,29 @@ function App() {
 
   const handleLogin = (userData) => {
     if (userData) {
-      setIsAuthenticated(true);
+      setIsLoggedIn(true);
       setIsAdmin(userData.is_admin || false);
+      navigate('/');
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    setIsLoggedIn(false);
+    setIsAdmin(false);
+    navigate('/');
   };
 
   const handleCategorySelect = (category) => {
     setSelectedCategory(category);
+    navigate('/game');
   };
 
   const handleGameComplete = (totalScore) => {
     setFinalScore(totalScore);
     setAverageScore(totalScore / 5);
     setGameComplete(true);
+    navigate('/game-complete');
   };
 
   const startNewGame = () => {
@@ -65,44 +77,24 @@ function App() {
     setSelectedCategory(null);
     setFinalScore(0);
     setAverageScore(0);
+    navigate('/');
   };
 
-  if (!isAuthenticated) {
+  if (!isLoggedIn) {
     return <Auth onLogin={handleLogin} />;
   }
 
   return (
     <div className="app">
-      <div className="container">
-        <header className="header">
-          <h1>Location Guessing Game</h1>
-          <div className="header-buttons">
-            {isAdmin && (
-              <button onClick={() => setShowAdmin(!showAdmin)}>
-                {showAdmin ? 'Play Game' : 'Admin Dashboard'}
-              </button>
-            )}
-            {!showAdmin && selectedCategory && (
-              <button onClick={() => setSelectedCategory(null)}>
-                Change Category
-              </button>
-            )}
-            <button onClick={() => {
-              localStorage.removeItem('token');
-              setIsAuthenticated(false);
-              setIsAdmin(false);
-              setShowAdmin(false);
-              setSelectedCategory(null);
-            }}>
-              Logout
-            </button>
-          </div>
-        </header>
-        
-        <main className="main-content">
-          {showAdmin && isAdmin ? (
-            <Admin />
-          ) : gameComplete ? (
+      <Navbar 
+        isLoggedIn={isLoggedIn} 
+        isAdmin={isAdmin} 
+        onLogout={handleLogout}
+      />
+      <div className="container mx-auto px-4">
+        <Routes>
+          <Route path="/admin" element={isAdmin ? <Admin /> : <Navigate to="/" />} />
+          <Route path="/game-complete" element={
             <div className="game-complete p-6">
               <div className="text-center mb-8">
                 <h2 className="text-2xl font-bold mb-4">Game Complete!</h2>
@@ -119,19 +111,27 @@ function App() {
                 <Leaderboard />
               </div>
             </div>
-          ) : !selectedCategory ? (
+          } />
+          <Route path="/game" element={
+            <Quiz 
+              category={selectedCategory} 
+              onGameComplete={handleGameComplete}
+            />
+          } />
+          <Route path="/" element={
             <CategorySelection onCategorySelect={handleCategorySelect} />
-          ) : (
-            <div className="game-section">
-              <Quiz 
-                category={selectedCategory} 
-                onGameComplete={handleGameComplete}
-              />
-            </div>
-          )}
-        </main>
+          } />
+        </Routes>
       </div>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
+    </BrowserRouter>
   );
 }
 
