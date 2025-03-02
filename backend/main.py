@@ -19,6 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from schemas import LocationCategory
 from sqlalchemy.exc import SQLAlchemyError
 import logging
+from pathlib import Path
 
 
 load_dotenv()
@@ -50,8 +51,10 @@ oauth2_scheme = OAuth2PasswordBearer(
     auto_error=False,
 )
 
-# Create images directory if it doesn't exist
-os.makedirs("images", exist_ok=True)
+# Create static/images directory if it doesn't exist
+STATIC_DIR = Path("static")
+IMAGES_DIR = STATIC_DIR / "images"
+IMAGES_DIR.mkdir(parents=True, exist_ok=True)
 
 # Mount the images directory
 app.mount("/images", StaticFiles(directory="images"), name="images")
@@ -96,35 +99,46 @@ async def get_current_user(
 async def create_location(
     latitude: float = Form(...),
     longitude: float = Form(...),
-    category: LocationCategory = Form(default=LocationCategory.OTHER),
+    category: str = Form(...),
+    name: str = Form(...),
     image: UploadFile = File(...),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if not current_user or not current_user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
+    try:
+        if not current_user.is_admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
+            )
+
+        # Save image
+        file_name = f"{datetime.now().timestamp()}_{image.filename}"
+        file_path = f"images/{file_name}"
+        full_path = STATIC_DIR / file_path
+
+        with open(full_path, "wb") as buffer:
+            buffer.write(await image.read())
+
+        # Create location with explicit column names
+        db_location = models.Location(
+            image_url=file_path,
+            latitude=float(latitude),
+            longitude=float(longitude),
+            category=category,
+            name=name,
         )
 
-    # Create images directory if it doesn't exist
-    if not os.path.exists("images"):
-        os.makedirs("images")
+        db.add(db_location)
+        db.commit()
+        db.refresh(db_location)
 
-    # Save the image
-    file_name = f"images/{image.filename}"
-    with open(file_name, "wb") as buffer:
-        buffer.write(await image.read())
+        return db_location
 
-    # Create new location
-    db_location = models.Location(
-        latitude=latitude, longitude=longitude, image_url=file_name, category=category
-    )
-
-    db.add(db_location)
-    db.commit()
-    db.refresh(db_location)
-
-    return db_location
+    except Exception as e:
+        print(f"Error creating location: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
 
 
 @app.get("/locations/random", response_model=schemas.Location)
@@ -426,3 +440,57 @@ async def delete_location(
     db.commit()
 
     return {"message": "Location deleted successfully"}
+
+
+@app.put("/admin/locations/{location_id}", response_model=schemas.Location)
+async def update_location(
+    location_id: int,
+    latitude: float = Form(...),
+    longitude: float = Form(...),
+    category: str = Form(...),
+    name: str = Form(...),
+    image: Optional[UploadFile] = None,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    # Check admin permission
+    if not current_user or not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
+        )
+
+    try:
+        location = (
+            db.query(models.Location).filter(models.Location.id == location_id).first()
+        )
+        if not location:
+            raise HTTPException(status_code=404, detail="Location not found")
+
+        # Update location details
+        location.latitude = latitude
+        location.longitude = longitude
+        location.category = category
+        location.name = name
+
+        if image:
+            # Handle image upload
+            file_name = f"{datetime.now().timestamp()}_{image.filename}"
+            file_path = f"images/{file_name}"
+            with open(file_path, "wb") as buffer:
+                buffer.write(await image.read())
+            location.image_url = file_path
+
+        # Commit changes
+        db.commit()
+        db.refresh(location)
+
+        logger.info(f"Location {location_id} updated with name: {name}")
+        return location
+
+    except Exception as e:
+        logger.error(f"Error updating location {location_id}: {str(e)}")
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error updating location: {str(e)}",
+        )

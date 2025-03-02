@@ -14,10 +14,13 @@ function Admin() {
     latitude: '',
     longitude: '',
     image: null,
-    category: 'landmark'  // Default category
+    category: 'landmark',
+    name: ''
   });
+  const [editingLocation, setEditingLocation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [message, setMessage] = useState('');
 
   const categories = [
     'landmark',
@@ -74,11 +77,28 @@ function Admin() {
   const handleLocationSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Validate form data
+      if (!newLocation.name || !newLocation.latitude || !newLocation.longitude || !newLocation.image) {
+        setError('Please fill in all fields');
+        return;
+      }
+
+      // Create FormData object
       const formData = new FormData();
       formData.append('latitude', newLocation.latitude);
       formData.append('longitude', newLocation.longitude);
+      formData.append('category', newLocation.category);
+      formData.append('name', newLocation.name);
       formData.append('image', newLocation.image);
-      formData.append('category', newLocation.category);  // Add category to form data
+
+      // Debug log
+      console.log('Submitting location:', {
+        name: newLocation.name,
+        latitude: newLocation.latitude,
+        longitude: newLocation.longitude,
+        category: newLocation.category,
+        image: newLocation.image?.name
+      });
 
       const token = localStorage.getItem('token');
       const response = await fetch('http://localhost:8000/locations/', {
@@ -89,18 +109,86 @@ function Admin() {
         body: formData
       });
 
-      if (response.ok) {
-        fetchDashboardData();
-        setNewLocation({ 
-          latitude: '', 
-          longitude: '', 
-          image: null, 
-          category: 'landmark' 
-        });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to add location');
       }
+
+      const data = await response.json();
+      console.log('Location created:', data);
+
+      // Reset form
+      setNewLocation({
+        latitude: '',
+        longitude: '',
+        image: null,
+        category: 'landmark',
+        name: ''
+      });
+
+      // Clear the file input
+      const fileInput = document.querySelector('input[type="file"]');
+      if (fileInput) {
+        fileInput.value = '';
+      }
+
+      await fetchDashboardData();
+      setMessage('Location added successfully!');
     } catch (error) {
-      setError('Failed to add location');
+      console.error('Error adding location:', error);
+      setError(error.message);
     }
+  };
+
+  const handleEditClick = (location) => {
+    setEditingLocation({
+      ...location,
+      image: null // Reset image since we don't want to show the current image path
+    });
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const formData = new FormData();
+      formData.append('latitude', editingLocation.latitude);
+      formData.append('longitude', editingLocation.longitude);
+      formData.append('category', editingLocation.category);
+      formData.append('name', editingLocation.name);
+      
+      if (editingLocation.image) {
+        formData.append('image', editingLocation.image);
+      }
+
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8000/admin/locations/${editingLocation.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to update location');
+      }
+
+      // Refresh the locations data
+      await fetchDashboardData();
+      setEditingLocation(null);
+      
+      // Show success message
+      setMessage('Location updated successfully');
+      setTimeout(() => setMessage(''), 3000);
+    } catch (error) {
+      setError(error.message);
+      setTimeout(() => setError(''), 3000);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingLocation(null);
   };
 
   const handleDeleteLocation = async (locationId) => {
@@ -140,6 +228,8 @@ function Admin() {
 
   return (
     <div className="admin-dashboard">
+      {message && <div className="success-message">{message}</div>}
+      {error && <div className="error-message">{error}</div>}
       <h1>Admin Dashboard</h1>
       
       <div className="stats-grid">
@@ -164,39 +254,73 @@ function Admin() {
       <div className="admin-sections">
         <section className="locations-section">
           <h2>Add New Location</h2>
-          <form onSubmit={handleLocationSubmit}>
-            <input
-              type="number"
-              step="any"
-              placeholder="Latitude"
-              value={newLocation.latitude}
-              onChange={(e) => setNewLocation({...newLocation, latitude: e.target.value})}
-              required
-            />
-            <input
-              type="number"
-              step="any"
-              placeholder="Longitude"
-              value={newLocation.longitude}
-              onChange={(e) => setNewLocation({...newLocation, longitude: e.target.value})}
-              required
-            />
-            <select
-              value={newLocation.category}
-              onChange={(e) => setNewLocation({...newLocation, category: e.target.value})}
-              required
-            >
-              {categories.map(category => (
-                <option key={category} value={category}>
-                  {category.charAt(0).toUpperCase() + category.slice(1)}
-                </option>
-              ))}
-            </select>
-            <input
-              type="file"
-              onChange={(e) => setNewLocation({...newLocation, image: e.target.files[0]})}
-              required
-            />
+          <form onSubmit={handleLocationSubmit} className="add-location-form">
+            <div className="form-group">
+              <label htmlFor="name">Location Name:</label>
+              <input
+                id="name"
+                type="text"
+                placeholder="Location Name"
+                value={newLocation.name}
+                onChange={(e) => setNewLocation({...newLocation, name: e.target.value})}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="latitude">Latitude:</label>
+              <input
+                id="latitude"
+                type="number"
+                step="any"
+                placeholder="Latitude"
+                value={newLocation.latitude}
+                onChange={(e) => setNewLocation({...newLocation, latitude: e.target.value})}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="longitude">Longitude:</label>
+              <input
+                id="longitude"
+                type="number"
+                step="any"
+                placeholder="Longitude"
+                value={newLocation.longitude}
+                onChange={(e) => setNewLocation({...newLocation, longitude: e.target.value})}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="category">Category:</label>
+              <select
+                id="category"
+                value={newLocation.category}
+                onChange={(e) => setNewLocation({...newLocation, category: e.target.value})}
+                required
+              >
+                {categories.map(category => (
+                  <option key={category} value={category}>
+                    {category.charAt(0).toUpperCase() + category.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="image">Image:</label>
+              <input
+                id="image"
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    console.log('Selected file:', file.name);
+                    setNewLocation({...newLocation, image: file});
+                  }
+                }}
+                required
+              />
+            </div>
             <button type="submit">Add Location</button>
           </form>
 
@@ -205,17 +329,90 @@ function Admin() {
             {locations.map(location => (
               <div key={location.id} className="location-card">
                 <img src={`http://localhost:8000/${location.image_url}`} alt="Location" />
-                <p>Lat: {location.latitude}</p>
-                <p>Long: {location.longitude}</p>
-                <p className="location-category">
-                  Category: {location.category.charAt(0).toUpperCase() + location.category.slice(1)}
-                </p>
-                <button 
-                  className="delete-button"
-                  onClick={() => handleDeleteLocation(location.id)}
-                >
-                  Delete
-                </button>
+                {editingLocation?.id === location.id ? (
+                  <form onSubmit={handleEditSubmit} className="edit-form">
+                    <input
+                      type="number"
+                      step="any"
+                      placeholder="Latitude"
+                      value={editingLocation.latitude}
+                      onChange={(e) => setEditingLocation({
+                        ...editingLocation,
+                        latitude: e.target.value
+                      })}
+                      required
+                    />
+                    <input
+                      type="number"
+                      step="any"
+                      placeholder="Longitude"
+                      value={editingLocation.longitude}
+                      onChange={(e) => setEditingLocation({
+                        ...editingLocation,
+                        longitude: e.target.value
+                      })}
+                      required
+                    />
+                    <input
+                      type="text"
+                      placeholder="Location Name"
+                      value={editingLocation.name}
+                      onChange={(e) => setEditingLocation({
+                        ...editingLocation,
+                        name: e.target.value
+                      })}
+                      required
+                    />
+                    <select
+                      value={editingLocation.category}
+                      onChange={(e) => setEditingLocation({
+                        ...editingLocation,
+                        category: e.target.value
+                      })}
+                      required
+                    >
+                      {categories.map(category => (
+                        <option key={category} value={category}>
+                          {category.charAt(0).toUpperCase() + category.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="file"
+                      onChange={(e) => setEditingLocation({
+                        ...editingLocation,
+                        image: e.target.files[0]
+                      })}
+                    />
+                    <div className="edit-buttons">
+                      <button type="submit" className="save-button">Save</button>
+                      <button type="button" onClick={handleCancelEdit} className="cancel-button">Cancel</button>
+                    </div>
+                  </form>
+                ) : (
+                  <>
+                    <p>Name: {location.name}</p>
+                    <p>Lat: {location.latitude}</p>
+                    <p>Long: {location.longitude}</p>
+                    <p className="location-category">
+                      Category: {location.category.charAt(0).toUpperCase() + location.category.slice(1)}
+                    </p>
+                    <div className="location-buttons">
+                      <button 
+                        className="edit-button"
+                        onClick={() => handleEditClick(location)}
+                      >
+                        Edit
+                      </button>
+                      <button 
+                        className="delete-button"
+                        onClick={() => handleDeleteLocation(location.id)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             ))}
           </div>

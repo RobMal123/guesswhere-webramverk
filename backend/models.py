@@ -8,9 +8,9 @@ from sqlalchemy import (
     Boolean,
     Text,
     TIMESTAMP,
+    func,
 )
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
 from database import Base
 
 
@@ -31,12 +31,17 @@ class Location(Base):
     __tablename__ = "locations"
 
     id = Column(Integer, primary_key=True, index=True)
-    image_url = Column(String)
-    latitude = Column(Float)
-    longitude = Column(Float)
-    description = Column(Text, nullable=True)
-    category = Column(String(50), nullable=False, default="other")
-    created_at = Column(TIMESTAMP(timezone=True), server_default="now()")
+    image_url = Column(String(200), nullable=False)
+    latitude = Column(Float, nullable=False)
+    longitude = Column(Float, nullable=False)
+    name = Column(String(100))
+    category = Column(String(50), nullable=False, server_default="other")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    scores = relationship("Score", back_populates="location")
 
 
 class Score(Base):
@@ -51,3 +56,4 @@ class Score(Base):
     created_at = Column(TIMESTAMP(timezone=True), server_default="now()")
 
     user = relationship("User", back_populates="scores")
+    location = relationship("Location", back_populates="scores")

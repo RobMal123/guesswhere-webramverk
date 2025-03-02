@@ -15,6 +15,7 @@ function Quiz({ category, onGameComplete }) {
   const [usedLocationIds, setUsedLocationIds] = useState([]);
   const [roundNumber, setRoundNumber] = useState(1);
   const TOTAL_ROUNDS = 5;
+  const [locationName, setLocationName] = useState(null);
 
   useEffect(() => {
     // Check if user is logged in
@@ -29,14 +30,13 @@ function Quiz({ category, onGameComplete }) {
   const fetchLocation = async () => {
     try {
       setIsLoading(true);
-      // Add all used location IDs to the exclude parameter
-      const excludeParam = usedLocationIds.length > 0 
-        ? `&exclude=${usedLocationIds.join(',')}`
-        : '';
-      
       const baseUrl = category === 'random' 
         ? 'http://localhost:8000/locations/random'
         : `http://localhost:8000/locations/random?category=${category}`;
+      
+      const excludeParam = usedLocationIds.length > 0 
+        ? `&exclude=${usedLocationIds.join(',')}`
+        : '';
       
       const url = `${baseUrl}${excludeParam}`;
         
@@ -46,11 +46,11 @@ function Quiz({ category, onGameComplete }) {
       }
       const data = await response.json();
       
-      // Add the new location ID to the used locations array
       setUsedLocationIds(prev => [...prev, data.id]);
       setCurrentImage(data.image_url);
       setCorrectLocation([data.latitude, data.longitude]);
       setLocationId(data.id);
+      setLocationName(data.name || 'this location');
       setShowResult(false);
       setGuessedLocation(null);
     } catch (error) {
@@ -138,7 +138,7 @@ function Quiz({ category, onGameComplete }) {
       {showResult && (
         <div className="result-container">
           <h2>Round Score: {score} points</h2>
-          <p>You were {distance} km away from the target!</p>
+          <p>You were {distance} km away from {locationName}!</p>
           <button 
             onClick={handleNextRound}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"

@@ -36,7 +36,8 @@ class LocationCategory(str, Enum):
 class LocationBase(BaseModel):
     latitude: float
     longitude: float
-    category: LocationCategory = LocationCategory.OTHER  # Default to 'other'
+    category: str
+    name: str  # Added name as required field
 
 
 class LocationCreate(LocationBase):
