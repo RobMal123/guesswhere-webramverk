@@ -14,29 +14,64 @@ function Admin() {
     latitude: '',
     longitude: '',
     image: null,
-    category: 'landmark',
-    name: ''
+    category_id: '',
+    name: '',
+    description: '',
+    difficulty_level: 'medium',
+    country: '',
+    region: ''
   });
   const [editingLocation, setEditingLocation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState('');
+  const [categories, setCategories] = useState([]);
+  const [newCategory, setNewCategory] = useState({
+    name: ''
+  });
+  const [newAchievement, setNewAchievement] = useState({
+    name: '',
+    description: '',
+    category_id: '',
+    country: '',
+    points_required: ''
+  });
+  const [achievements, setAchievements] = useState([]);
 
-  const categories = [
-    'landmark',
-    'nature',
-    'city',
-    'building',
-    'park',
-    'beach',
-    'mountain',
-    "castle",
-    "bridge",
-    'other'
-  ];
+  const achievementTiers = {
+    bronze: {
+      name: "Bronze Tier",
+      range: "0-3500",
+      color: "#CD7F32"
+    },
+    silver: {
+      name: "Silver Tier",
+      range: "3500-4000",
+      color: "#C0C0C0"
+    },
+    gold: {
+      name: "Gold Tier",
+      range: "4000-4750",
+      color: "#FFD700"
+    },
+    diamond: {
+      name: "Diamond Tier",
+      range: "4750-5000",
+      color: "#B9F2FF"
+    }
+  };
+
+  const getTierForPoints = (points) => {
+    if (points >= 4750) return 'diamond';
+    if (points >= 4000) return 'gold';
+    if (points >= 3500) return 'silver';
+    return 'bronze';
+  };
 
   useEffect(() => {
     fetchDashboardData();
+    fetchCategories();
+    fetchAchievements();
   }, []);
 
   const fetchDashboardData = async () => {
@@ -74,6 +109,26 @@ function Admin() {
     }
   };
 
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/categories/');
+      const data = await response.json();
+      setCategories(data);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
+
+  const fetchAchievements = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/achievements/');
+      const data = await response.json();
+      setAchievements(data);
+    } catch (error) {
+      console.error('Error fetching achievements:', error);
+    }
+  };
+
   const handleLocationSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -87,8 +142,12 @@ function Admin() {
       const formData = new FormData();
       formData.append('latitude', newLocation.latitude);
       formData.append('longitude', newLocation.longitude);
-      formData.append('category', newLocation.category);
+      formData.append('category_id', newLocation.category_id);
       formData.append('name', newLocation.name);
+      formData.append('description', newLocation.description);
+      formData.append('difficulty_level', newLocation.difficulty_level);
+      formData.append('country', newLocation.country);
+      formData.append('region', newLocation.region);
       formData.append('image', newLocation.image);
 
       // Debug log
@@ -96,7 +155,7 @@ function Admin() {
         name: newLocation.name,
         latitude: newLocation.latitude,
         longitude: newLocation.longitude,
-        category: newLocation.category,
+        category: newLocation.category_id,
         image: newLocation.image?.name
       });
 
@@ -122,8 +181,12 @@ function Admin() {
         latitude: '',
         longitude: '',
         image: null,
-        category: 'landmark',
-        name: ''
+        category_id: '',
+        name: '',
+        description: '',
+        difficulty_level: 'medium',
+        country: '',
+        region: ''
       });
 
       // Clear the file input
@@ -153,8 +216,12 @@ function Admin() {
       const formData = new FormData();
       formData.append('latitude', editingLocation.latitude);
       formData.append('longitude', editingLocation.longitude);
-      formData.append('category', editingLocation.category);
+      formData.append('category_id', editingLocation.category_id);
       formData.append('name', editingLocation.name);
+      formData.append('description', editingLocation.description);
+      formData.append('difficulty_level', editingLocation.difficulty_level);
+      formData.append('country', editingLocation.country);
+      formData.append('region', editingLocation.region);
       
       if (editingLocation.image) {
         formData.append('image', editingLocation.image);
@@ -223,6 +290,66 @@ function Admin() {
     }
   };
 
+  const handleCategorySubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:8000/categories/', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newCategory)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to add category');
+      }
+
+      // Reset form and refresh categories
+      setNewCategory({ name: '' });
+      await fetchCategories();
+      setMessage('Category added successfully!');
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+
+  const handleAchievementSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:8000/achievements/', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newAchievement)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to add achievement');
+      }
+
+      // Reset form and refresh achievements
+      setNewAchievement({
+        name: '',
+        description: '',
+        category_id: '',
+        country: '',
+        points_required: ''
+      });
+      await fetchAchievements();
+      setMessage('Achievement added successfully!');
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
 
@@ -250,6 +377,128 @@ function Admin() {
           <p>{stats.averageScore.toFixed(2)}</p>
         </div>
       </div>
+
+      <section className="categories-section">
+        <h2>Manage Categories</h2>
+        <div className="categories-container">
+          <div className="add-category-form">
+            <form onSubmit={handleCategorySubmit}>
+              <div className="form-group">
+                <label htmlFor="categoryName">New Category Name:</label>
+                <input
+                  id="categoryName"
+                  type="text"
+                  value={newCategory.name}
+                  onChange={(e) => setNewCategory({ name: e.target.value })}
+                  required
+                />
+              </div>
+              <button type="submit">Add Category</button>
+            </form>
+          </div>
+          
+          <div className="existing-categories">
+            <h3>Existing Categories</h3>
+            <div className="categories-grid">
+              {categories.map(category => (
+                <div key={category.id} className="category-card">
+                  <span>{category.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="achievements-section">
+        <h2>Manage Achievements</h2>
+        <div className="achievements-container">
+          <div className="add-achievement-form">
+            <form onSubmit={handleAchievementSubmit}>
+              <div className="form-group">
+                <label htmlFor="achievementName">Name:</label>
+                <input
+                  id="achievementName"
+                  type="text"
+                  value={newAchievement.name}
+                  onChange={(e) => setNewAchievement({...newAchievement, name: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="achievementDescription">Description:</label>
+                <textarea
+                  id="achievementDescription"
+                  value={newAchievement.description}
+                  onChange={(e) => setNewAchievement({...newAchievement, description: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="achievementCategory">Category (optional):</label>
+                <select
+                  id="achievementCategory"
+                  value={newAchievement.category_id}
+                  onChange={(e) => setNewAchievement({...newAchievement, category_id: e.target.value})}
+                >
+                  <option value="">No specific category</option>
+                  {categories.map(category => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label htmlFor="achievementCountry">Country (optional):</label>
+                <input
+                  id="achievementCountry"
+                  type="text"
+                  value={newAchievement.country}
+                  onChange={(e) => setNewAchievement({...newAchievement, country: e.target.value})}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="achievementPoints">Points Required:</label>
+                <input
+                  id="achievementPoints"
+                  type="number"
+                  min="0"
+                  max="5000"
+                  value={newAchievement.points_required}
+                  onChange={(e) => setNewAchievement({...newAchievement, points_required: e.target.value})}
+                  required
+                />
+              </div>
+              <button type="submit">Add Achievement</button>
+            </form>
+          </div>
+
+          <div className="existing-achievements">
+            <h3>Achievement Tiers</h3>
+            {Object.entries(achievementTiers).map(([tier, { name, range, color }]) => (
+              <div key={tier} className="achievement-tier">
+                <h4 style={{ color }}>{name} ({range} points)</h4>
+                <div className="achievements-grid">
+                  {achievements
+                    .filter(a => getTierForPoints(a.points_required) === tier)
+                    .map(achievement => (
+                      <div key={achievement.id} className="achievement-card" style={{ borderLeft: `4px solid ${color}` }}>
+                        <h4>{achievement.name}</h4>
+                        <p>{achievement.description}</p>
+                        <p>Points Required: {achievement.points_required}</p>
+                        {achievement.category_id && (
+                          <p>Category: {categories.find(c => c.id === achievement.category_id)?.name}</p>
+                        )}
+                        {achievement.country && <p>Country: {achievement.country}</p>}
+                      </div>
+                    ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <div className="admin-sections">
         <section className="locations-section">
@@ -294,16 +543,58 @@ function Admin() {
               <label htmlFor="category">Category:</label>
               <select
                 id="category"
-                value={newLocation.category}
-                onChange={(e) => setNewLocation({...newLocation, category: e.target.value})}
+                value={newLocation.category_id}
+                onChange={(e) => setNewLocation({...newLocation, category_id: e.target.value})}
                 required
               >
+                <option value="">Select a category</option>
                 {categories.map(category => (
-                  <option key={category} value={category}>
-                    {category.charAt(0).toUpperCase() + category.slice(1)}
+                  <option key={category.id} value={category.id}>
+                    {category.name}
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="description">Description:</label>
+              <textarea
+                id="description"
+                value={newLocation.description}
+                onChange={(e) => setNewLocation({...newLocation, description: e.target.value})}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="difficulty">Difficulty Level:</label>
+              <select
+                id="difficulty"
+                value={newLocation.difficulty_level}
+                onChange={(e) => setNewLocation({...newLocation, difficulty_level: e.target.value})}
+                required
+              >
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="country">Country:</label>
+              <input
+                id="country"
+                type="text"
+                value={newLocation.country}
+                onChange={(e) => setNewLocation({...newLocation, country: e.target.value})}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="region">Region:</label>
+              <input
+                id="region"
+                type="text"
+                value={newLocation.region}
+                onChange={(e) => setNewLocation({...newLocation, region: e.target.value})}
+                required
+              />
             </div>
             <div className="form-group">
               <label htmlFor="image">Image:</label>
@@ -364,19 +655,59 @@ function Admin() {
                       required
                     />
                     <select
-                      value={editingLocation.category}
+                      value={editingLocation.category_id}
                       onChange={(e) => setEditingLocation({
                         ...editingLocation,
-                        category: e.target.value
+                        category_id: e.target.value
                       })}
                       required
                     >
+                      <option value="">Select a category</option>
                       {categories.map(category => (
-                        <option key={category} value={category}>
-                          {category.charAt(0).toUpperCase() + category.slice(1)}
+                        <option key={category.id} value={category.id}>
+                          {category.name}
                         </option>
                       ))}
                     </select>
+                    <textarea
+                      value={editingLocation.description}
+                      onChange={(e) => setEditingLocation({
+                        ...editingLocation,
+                        description: e.target.value
+                      })}
+                    />
+                    <select
+                      value={editingLocation.difficulty_level}
+                      onChange={(e) => setEditingLocation({
+                        ...editingLocation,
+                        difficulty_level: e.target.value
+                      })}
+                      required
+                    >
+                      <option value="easy">Easy</option>
+                      <option value="medium">Medium</option>
+                      <option value="hard">Hard</option>
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="Country"
+                      value={editingLocation.country}
+                      onChange={(e) => setEditingLocation({
+                        ...editingLocation,
+                        country: e.target.value
+                      })}
+                      required
+                    />
+                    <input
+                      type="text"
+                      placeholder="Region"
+                      value={editingLocation.region}
+                      onChange={(e) => setEditingLocation({
+                        ...editingLocation,
+                        region: e.target.value
+                      })}
+                      required
+                    />
                     <input
                       type="file"
                       onChange={(e) => setEditingLocation({
@@ -395,7 +726,7 @@ function Admin() {
                     <p>Lat: {location.latitude}</p>
                     <p>Long: {location.longitude}</p>
                     <p className="location-category">
-                      Category: {location.category.charAt(0).toUpperCase() + location.category.slice(1)}
+                      Category: {location.category_id}
                     </p>
                     <div className="location-buttons">
                       <button 

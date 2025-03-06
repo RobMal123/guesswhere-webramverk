@@ -1,3 +1,4 @@
+-- Users table (No changes)
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
@@ -8,18 +9,29 @@ CREATE TABLE users (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Categories table to normalize categories instead of using a string
+CREATE TABLE categories (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL
+);
+
+-- Locations table with additional metadata
 CREATE TABLE locations (
     id SERIAL PRIMARY KEY,
-    image_url VARCHAR(200) NOT NULL,
+    image_url VARCHAR(255) NOT NULL,
     latitude FLOAT NOT NULL CHECK (latitude BETWEEN -90 AND 90),
     longitude FLOAT NOT NULL CHECK (longitude BETWEEN -180 AND 180),
     name VARCHAR(100),
     description TEXT,
-    category VARCHAR(50) SET DEFAULT 'other' SET NOT NULL,
+    category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+    difficulty_level VARCHAR(20) CHECK (difficulty_level IN ('easy', 'medium', 'hard')),
+    country VARCHAR(100),
+    region VARCHAR(100),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Scores table (No major changes)
 CREATE TABLE scores (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -30,21 +42,195 @@ CREATE TABLE scores (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create indexes for better query performance
+-- Game sessions table to track individual game attempts
+CREATE TABLE game_sessions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    ended_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Leaderboard table for optimized score tracking
+CREATE TABLE leaderboard (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    highest_score INTEGER NOT NULL CHECK (highest_score >= 0),
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Friends system for social interaction
+CREATE TABLE friends (
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    friend_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, friend_id)
+);
+
+-- Achievements table: Defines achievement types
+CREATE TABLE achievements (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT NOT NULL,
+    category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+    country VARCHAR(100),
+    points_required INTEGER NOT NULL CHECK (points_required BETWEEN 0 AND 5000)
+);
+
+-- User Achievements table: Tracks which achievements a user has earned
+CREATE TABLE user_achievements (
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    achievement_id INTEGER REFERENCES achievements(id) ON DELETE CASCADE,
+    earned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, achievement_id)
+);
+
+-- Indexes for performance optimization
 CREATE INDEX idx_scores_user_id ON scores(user_id);
 CREATE INDEX idx_scores_location_id ON scores(location_id);
 CREATE INDEX idx_locations_coords ON locations(latitude, longitude);
+CREATE INDEX idx_leaderboard_user_id ON leaderboard(user_id);
+CREATE INDEX idx_achievements_category ON achievements(category_id);
+CREATE INDEX idx_achievements_country ON achievements(country);
+CREATE INDEX idx_user_achievements_user ON user_achievements(user_id);
 
--- Function to automatically update updated_at timestamp
+-- Trigger function to update updated_at column
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = CURRENT_TIMESTAMP;
     RETURN NEW;
 END;
-$$ language 'plpgsql';
+$$ LANGUAGE plpgsql;
 
--- Create triggers for updating updated_at
+-- Populate initial achievements
+INSERT INTO achievements (name, description, points_required) VALUES
+-- Bronze Tier
+('Novice Explorer', 'Take your first steps into the world of geography', 0),
+('Bronze Pathfinder', 'Show promising navigation skills', 1000),
+('Bronze Master', 'Master the basics of geographical discovery', 2500),
+
+-- Silver Tier
+('Silver Scout', 'Demonstrate advanced knowledge of locations', 3500),
+('Silver Explorer', 'Navigate with increasing precision', 3700),
+('Silver Master', 'Show exceptional geographical intuition', 3850),
+
+-- Gold Tier
+('Gold Voyager', 'Achieve remarkable accuracy in your explorations', 4000),
+('Gold Navigator', 'Display outstanding geographical expertise', 4250),
+('Gold Master', 'Reach the elite ranks of world explorers', 4500),
+
+-- Diamond Tier
+('Diamond Cartographer', 'Join the ranks of legendary geographers', 4750),
+('Diamond Sage', 'Achieve near-perfect geographical mastery', 4850),
+('Diamond Grandmaster', 'Reach the pinnacle of geographical excellence', 4950);
+
+-- Create a function to award tier achievements
+CREATE OR REPLACE FUNCTION check_tier_achievements(user_id INTEGER, score INTEGER)
+RETURNS VOID AS $$
+BEGIN
+    -- Bronze Tier
+    IF score >= 0 THEN
+        INSERT INTO user_achievements (user_id, achievement_id)
+        SELECT $1, id FROM achievements WHERE name = 'Novice Explorer'
+        ON CONFLICT DO NOTHING;
+    END IF;
+    
+    IF score >= 1000 THEN
+        INSERT INTO user_achievements (user_id, achievement_id)
+        SELECT $1, id FROM achievements WHERE name = 'Bronze Pathfinder'
+        ON CONFLICT DO NOTHING;
+    END IF;
+    
+    IF score >= 2500 THEN
+        INSERT INTO user_achievements (user_id, achievement_id)
+        SELECT $1, id FROM achievements WHERE name = 'Bronze Master'
+        ON CONFLICT DO NOTHING;
+    END IF;
+
+    -- Silver Tier
+    IF score >= 3500 THEN
+        INSERT INTO user_achievements (user_id, achievement_id)
+        SELECT $1, id FROM achievements WHERE name = 'Silver Scout'
+        ON CONFLICT DO NOTHING;
+    END IF;
+    
+    IF score >= 3700 THEN
+        INSERT INTO user_achievements (user_id, achievement_id)
+        SELECT $1, id FROM achievements WHERE name = 'Silver Explorer'
+        ON CONFLICT DO NOTHING;
+    END IF;
+    
+    IF score >= 3850 THEN
+        INSERT INTO user_achievements (user_id, achievement_id)
+        SELECT $1, id FROM achievements WHERE name = 'Silver Master'
+        ON CONFLICT DO NOTHING;
+    END IF;
+
+    -- Gold Tier
+    IF score >= 4000 THEN
+        INSERT INTO user_achievements (user_id, achievement_id)
+        SELECT $1, id FROM achievements WHERE name = 'Gold Voyager'
+        ON CONFLICT DO NOTHING;
+    END IF;
+    
+    IF score >= 4250 THEN
+        INSERT INTO user_achievements (user_id, achievement_id)
+        SELECT $1, id FROM achievements WHERE name = 'Gold Navigator'
+        ON CONFLICT DO NOTHING;
+    END IF;
+    
+    IF score >= 4500 THEN
+        INSERT INTO user_achievements (user_id, achievement_id)
+        SELECT $1, id FROM achievements WHERE name = 'Gold Master'
+        ON CONFLICT DO NOTHING;
+    END IF;
+
+    -- Diamond Tier
+    IF score >= 4750 THEN
+        INSERT INTO user_achievements (user_id, achievement_id)
+        SELECT $1, id FROM achievements WHERE name = 'Diamond Cartographer'
+        ON CONFLICT DO NOTHING;
+    END IF;
+    
+    IF score >= 4850 THEN
+        INSERT INTO user_achievements (user_id, achievement_id)
+        SELECT $1, id FROM achievements WHERE name = 'Diamond Sage'
+        ON CONFLICT DO NOTHING;
+    END IF;
+    
+    IF score >= 4950 THEN
+        INSERT INTO user_achievements (user_id, achievement_id)
+        SELECT $1, id FROM achievements WHERE name = 'Diamond Grandmaster'
+        ON CONFLICT DO NOTHING;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Update the existing check_and_award_achievements function to include tier achievements
+CREATE OR REPLACE FUNCTION check_and_award_achievements(user_id INTEGER, location_id INTEGER, score INTEGER)
+RETURNS VOID AS $$
+BEGIN
+    -- Award achievements based on category
+    INSERT INTO user_achievements (user_id, achievement_id)
+    SELECT DISTINCT $1, a.id
+    FROM achievements a
+    JOIN locations l ON a.category_id = l.category_id
+    WHERE l.id = $2 AND score >= a.points_required
+    ON CONFLICT DO NOTHING;
+
+    -- Award achievements based on country
+    INSERT INTO user_achievements (user_id, achievement_id)
+    SELECT DISTINCT $1, a.id
+    FROM achievements a
+    JOIN locations l ON a.country = l.country
+    WHERE l.id = $2 AND score >= a.points_required
+    ON CONFLICT DO NOTHING;
+
+    -- Check and award tier achievements
+    PERFORM check_tier_achievements($1, $3);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Triggers for updating timestamps
 CREATE TRIGGER update_users_updated_at
     BEFORE UPDATE ON users
     FOR EACH ROW
@@ -52,5 +238,10 @@ CREATE TRIGGER update_users_updated_at
 
 CREATE TRIGGER update_locations_updated_at
     BEFORE UPDATE ON locations
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_leaderboard_updated_at
+    BEFORE UPDATE ON leaderboard
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();

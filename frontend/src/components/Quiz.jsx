@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Map from './Map';
+import AchievementNotification from './AchievementNotification';
 
 function Quiz({ category, onGameComplete }) {
   const [currentImage, setCurrentImage] = useState(null);
@@ -16,8 +17,13 @@ function Quiz({ category, onGameComplete }) {
   const [roundNumber, setRoundNumber] = useState(1);
   const TOTAL_ROUNDS = 5;
   const [locationName, setLocationName] = useState(null);
+  const [gameSessionId, setGameSessionId] = useState(null);
+  const [newAchievements, setNewAchievements] = useState([]);
+  const [showAchievement, setShowAchievement] = useState(false);
+  const [currentAchievement, setCurrentAchievement] = useState(null);
 
   useEffect(() => {
+    startGameSession();
     // Check if user is logged in
     const token = localStorage.getItem('token');
     if (!token) {
@@ -27,25 +33,63 @@ function Quiz({ category, onGameComplete }) {
     fetchLocation();
   }, []);
 
+  const startGameSession = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:8000/game-sessions/start', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      setGameSessionId(data.id);
+    } catch (error) {
+      setError('Failed to start game session');
+    }
+  };
+
+  const endGameSession = async () => {
+    if (!gameSessionId) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`http://localhost:8000/game-sessions/${gameSessionId}/end`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+    } catch (error) {
+      console.error('Failed to end game session:', error);
+    }
+  };
+
+  const handleGameComplete = async (totalScore) => {
+    await endGameSession();
+    onGameComplete(totalScore);
+  };
+
   const fetchLocation = async () => {
     try {
       setIsLoading(true);
-      const baseUrl = category === 'random' 
+      const baseUrl = category === 'Random' 
         ? 'http://localhost:8000/locations/random'
-        : `http://localhost:8000/locations/random?category=${category}`;
+        : `http://localhost:8000/locations/category/${category}`;
       
       const excludeParam = usedLocationIds.length > 0 
-        ? `&exclude=${usedLocationIds.join(',')}`
+        ? `?exclude=${usedLocationIds.join(',')}`
         : '';
       
       const url = `${baseUrl}${excludeParam}`;
-        
+      
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error('Failed to fetch location');
       }
       const data = await response.json();
       
+      console.log('Location data:', data);
       setUsedLocationIds(prev => [...prev, data.id]);
       setCurrentImage(data.image_url);
       setCorrectLocation([data.latitude, data.longitude]);
@@ -77,7 +121,8 @@ function Quiz({ category, onGameComplete }) {
           guessed_longitude: position.lng,
           actual_latitude: correctLocation[0],
           actual_longitude: correctLocation[1],
-          location_id: locationId
+          location_id: locationId,
+          game_session_id: gameSessionId
         })
       });
 
@@ -91,16 +136,50 @@ function Quiz({ category, onGameComplete }) {
       setTotalScore(prevTotal => prevTotal + data.score);
       setDistance(data.distance);
       setShowResult(true);
+
+      // Fetch new achievements after submitting guess
+      const achievementsResponse = await fetch('http://localhost:8000/users/achievements/', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (achievementsResponse.ok) {
+        const achievementsData = await achievementsResponse.json();
+        // Compare with previous achievements to find new ones
+        const newOnes = achievementsData.filter(achievement => 
+          !newAchievements.some(existing => 
+            existing.achievement_id === achievement.achievement_id
+          )
+        );
+        
+        if (newOnes.length > 0) {
+          setNewAchievements(achievementsData);
+          // Show achievements one by one
+          newOnes.forEach((achievement, index) => {
+            setTimeout(() => {
+              setCurrentAchievement(achievement);
+              setShowAchievement(true);
+            }, index * 3000); // Show each achievement for 3 seconds
+          });
+        }
+      }
+
     } catch (error) {
       console.error('Detailed error:', error);
       setError(error.message);
     }
   };
 
+  const handleCloseAchievement = () => {
+    setShowAchievement(false);
+    setCurrentAchievement(null);
+  };
+
   const handleNextRound = () => {
     if (roundNumber >= TOTAL_ROUNDS) {
       // Game complete
-      onGameComplete(totalScore);
+      handleGameComplete(totalScore);
     } else {
       setRoundNumber(prev => prev + 1);
       fetchLocation();
@@ -123,6 +202,10 @@ function Quiz({ category, onGameComplete }) {
             src={`http://localhost:8000/${currentImage}`} 
             alt="Guess this location" 
             className="location-image"
+            onError={(e) => {
+              console.error('Image failed to load:', e.target.src);
+              setError('Failed to load image');
+            }}
           />
         </div>
       )}
@@ -146,6 +229,13 @@ function Quiz({ category, onGameComplete }) {
             {roundNumber >= TOTAL_ROUNDS ? 'Finish Game' : 'Next Location'}
           </button>
         </div>
+      )}
+
+      {showAchievement && currentAchievement && (
+        <AchievementNotification 
+          achievement={currentAchievement.achievement}
+          onClose={handleCloseAchievement}
+        />
       )}
     </div>
   );

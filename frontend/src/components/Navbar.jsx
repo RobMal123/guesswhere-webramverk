@@ -35,6 +35,22 @@ function Navbar({ isLoggedIn, isAdmin, onLogout }) {
         </h1>
       </div>
       <div className="navbar-right">
+        {isLoggedIn && (
+          <>
+            <button 
+              className="nav-button"
+              onClick={() => navigate('/profile')}
+            >
+              Profile
+            </button>
+            <button 
+              className="nav-button"
+              onClick={() => navigate('/friends')}
+            >
+              Friends
+            </button>
+          </>
+        )}
         {isAdmin && (
           <button 
             className="nav-button admin-button"

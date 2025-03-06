@@ -6,6 +6,8 @@ import Admin from './components/Admin';
 import Leaderboard from './components/Leaderboard';
 import CategorySelection from './components/CategorySelection';
 import Navbar from './components/Navbar';
+import Friends from './components/Friends';
+import Profile from './components/Profile';
 import './styles/main.css';
 
 function AppContent() {
@@ -120,6 +122,10 @@ function AppContent() {
           } />
           <Route path="/" element={
             <CategorySelection onCategorySelect={handleCategorySelect} />
+          } />
+          <Route path="/friends" element={<Friends />} />
+          <Route path="/profile" element={
+            isLoggedIn ? <Profile /> : <Navigate to="/login" />
           } />
         </Routes>
       </div>

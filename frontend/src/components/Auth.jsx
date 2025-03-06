@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import '../styles/Auth.css';
 
 function Auth({ onLogin }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -71,7 +72,7 @@ function Auth({ onLogin }) {
       <h2>{isLogin ? 'Login' : 'Register'}</h2>
       {error && <div className="error-message">{error}</div>}
       
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="auth-form">
         <div className="form-group">
           <label>Username:</label>
           <input
@@ -107,13 +108,13 @@ function Auth({ onLogin }) {
           />
         </div>
         
-        <button type="submit">
+        <button type="submit" className="auth-button">
           {isLogin ? 'Login' : 'Register'}
         </button>
       </form>
       
       <button 
-        className="toggle-auth"
+        className="auth-toggle-button"
         onClick={() => setIsLogin(!isLogin)}
       >
         {isLogin ? 'Need an account? Register' : 'Have an account? Login'}

@@ -1,7 +1,8 @@
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, constr
+from typing import Optional, List
 from enum import Enum
 from datetime import datetime
+from pydantic import validator
 
 
 class UserBase(BaseModel):
@@ -33,26 +34,104 @@ class LocationCategory(str, Enum):
     OTHER = "other"
 
 
+class DifficultyLevel(str, Enum):
+    EASY = "easy"
+    MEDIUM = "medium"
+    HARD = "hard"
+
+
+class CategoryBase(BaseModel):
+    name: str
+
+
+class CategoryCreate(CategoryBase):
+    pass
+
+
+class Category(CategoryBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+
 class LocationBase(BaseModel):
     latitude: float
     longitude: float
-    category: str
-    name: str  # Added name as required field
+    name: str
+    description: Optional[str] = None
+    category_id: int
+    difficulty_level: DifficultyLevel
+    country: str
+    region: str
 
 
 class LocationCreate(LocationBase):
     pass
 
 
-class Location(LocationBase):
+class Location(BaseModel):
     id: int
     image_url: str
     latitude: float
     longitude: float
-    category: LocationCategory
+    name: str
+    description: Optional[str] = None
+    category_id: Optional[int] = None
+    difficulty_level: str
+    country: Optional[str] = None
+    region: Optional[str] = None
     created_at: datetime
-    description: Optional[str] = None  # Add this if you have a description field
+    updated_at: datetime
 
+    @validator("image_url", pre=True)
+    def get_full_image_url(cls, v):
+        if not v.startswith("images/"):
+            return f"images/{v}"
+        return v
+
+    class Config:
+        from_attributes = True
+
+
+class GameSessionBase(BaseModel):
+    user_id: int
+
+
+class GameSessionCreate(GameSessionBase):
+    pass
+
+
+class GameSession(GameSessionBase):
+    id: int
+    started_at: datetime
+    ended_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class LeaderboardEntry(BaseModel):
+    id: int
+    user_id: int
+    username: str
+    highest_score: int
+    last_updated: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class FriendBase(BaseModel):
+    user_id: int
+    friend_id: int
+
+
+class FriendCreate(FriendBase):
+    pass
+
+
+class Friend(FriendBase):
     class Config:
         from_attributes = True
 
@@ -63,28 +142,82 @@ class GuessCreate(BaseModel):
     guessed_longitude: float
     actual_latitude: float
     actual_longitude: float
+    game_session_id: Optional[int] = None
 
 
 class ScoreCreate(BaseModel):
     user_id: int
     location_id: int
     score: int
+    game_session_id: Optional[int] = None
+    guess_latitude: float
+    guess_longitude: float
 
 
 class Score(ScoreCreate):
     id: int
+    created_at: datetime
 
     class Config:
         from_attributes = True
 
 
-class LeaderboardEntry(BaseModel):
+class AchievementBase(BaseModel):
+    name: str
+    description: str
+    category_id: Optional[int] = None
+    country: Optional[str] = None
+    points_required: int
+
+
+class AchievementCreate(AchievementBase):
+    pass
+
+
+class Achievement(AchievementBase):
     id: int
-    username: str
-    score: int
 
     class Config:
         from_attributes = True
+
+
+class UserAchievementBase(BaseModel):
+    user_id: int
+    achievement_id: int
+    earned_at: datetime
+
+
+class UserAchievement(UserAchievementBase):
+    achievement: Achievement
+
+    class Config:
+        from_attributes = True
+
+
+class UserWithStats(User):
+    total_games: int
+    highest_score: Optional[int]
+    average_score: Optional[float]
+    achievements: List[Achievement]
+
+
+class FriendDetail(BaseModel):
+    user: User
+    highest_score: Optional[int]
+    last_played: Optional[datetime]
+
+
+class UserFriends(BaseModel):
+    friends: List[FriendDetail]
+
+
+class GameSessionStats(BaseModel):
+    session_id: int
+    total_score: int
+    locations_played: int
+    average_score: float
+    started_at: datetime
+    ended_at: Optional[datetime]
 
 
 class Token(BaseModel):

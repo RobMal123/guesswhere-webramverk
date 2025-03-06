@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, and_, text
 import models
 import schemas
 import database
@@ -20,6 +20,8 @@ from schemas import LocationCategory
 from sqlalchemy.exc import SQLAlchemyError
 import logging
 from pathlib import Path
+import re
+from urllib.parse import unquote
 
 
 load_dotenv()
@@ -41,9 +43,9 @@ app.add_middleware(
 )
 
 # Security configurations
-SECRET_KEY = "your-secret-key"  # Change this!
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = os.getenv("ALGORITHM")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(
@@ -51,12 +53,11 @@ oauth2_scheme = OAuth2PasswordBearer(
     auto_error=False,
 )
 
-# Create static/images directory if it doesn't exist
-STATIC_DIR = Path("static")
-IMAGES_DIR = STATIC_DIR / "images"
-IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+# Setup directories
+IMAGES_DIR = Path("images")
+IMAGES_DIR.mkdir(exist_ok=True)
 
-# Mount the images directory
+# Mount the images directory directly
 app.mount("/images", StaticFiles(directory="images"), name="images")
 
 
@@ -99,8 +100,12 @@ async def get_current_user(
 async def create_location(
     latitude: float = Form(...),
     longitude: float = Form(...),
-    category: str = Form(...),
     name: str = Form(...),
+    description: str = Form(None),
+    category_id: int = Form(...),
+    difficulty_level: str = Form(...),
+    country: str = Form(...),
+    region: str = Form(...),
     image: UploadFile = File(...),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -111,21 +116,36 @@ async def create_location(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
             )
 
-        # Save image
-        file_name = f"{datetime.now().timestamp()}_{image.filename}"
-        file_path = f"images/{file_name}"
-        full_path = STATIC_DIR / file_path
+        # Validate difficulty level
+        if difficulty_level not in ["easy", "medium", "hard"]:
+            raise HTTPException(status_code=400, detail="Invalid difficulty level")
 
-        with open(full_path, "wb") as buffer:
+        # Verify category exists
+        category = (
+            db.query(models.Category).filter(models.Category.id == category_id).first()
+        )
+        if not category:
+            raise HTTPException(status_code=404, detail="Category not found")
+
+        # Sanitize the filename and save directly to images directory
+        safe_filename = sanitize_filename(image.filename)
+        file_name = f"{datetime.now().timestamp()}_{safe_filename}"
+        file_path = IMAGES_DIR / file_name
+
+        with open(file_path, "wb") as buffer:
             buffer.write(await image.read())
 
-        # Create location with explicit column names
+        # Create location with the correct image path
         db_location = models.Location(
-            image_url=file_path,
+            image_url=file_name,  # Store just the filename
             latitude=float(latitude),
             longitude=float(longitude),
-            category=category,
             name=name,
+            description=description,
+            category_id=category_id,
+            difficulty_level=difficulty_level,
+            country=country,
+            region=region,
         )
 
         db.add(db_location)
@@ -143,16 +163,15 @@ async def create_location(
 
 @app.get("/locations/random", response_model=schemas.Location)
 async def get_random_location(
-    category: Optional[str] = None,
     exclude: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
+    """Get a random location from any category"""
     try:
-        query = db.query(models.Location)
-
-        # Filter by category if specified and not random
-        if category and category != "random":
-            query = query.filter(models.Location.category == category)
+        # Start with base query that excludes NULL category_id
+        query = db.query(models.Location).filter(
+            models.Location.category_id.isnot(None)
+        )
 
         # Handle multiple excluded IDs
         if exclude:
@@ -161,24 +180,65 @@ async def get_random_location(
 
         locations = query.all()
         if not locations:
-            # If no locations found (possibly because all were excluded),
-            # try again without the exclusion
-            if exclude:
-                query = db.query(models.Location)
-                if category and category != "random":
-                    query = query.filter(models.Location.category == category)
-                locations = query.all()
-
-            if not locations:
-                raise HTTPException(
-                    status_code=404,
-                    detail="No locations found for the specified category",
-                )
+            raise HTTPException(
+                status_code=404,
+                detail="No locations available",
+            )
 
         return random.choice(locations)
     except Exception as e:
         logger.error(f"Error fetching random location: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error fetching random location")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error fetching random location: {str(e)}",
+        )
+
+
+@app.get("/locations/category/{category_name}", response_model=schemas.Location)
+async def get_location_by_category(
+    category_name: str,
+    exclude: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    """Get a random location from a specific category"""
+    try:
+        # First, verify the category exists
+        category = (
+            db.query(models.Category)
+            .filter(func.lower(models.Category.name) == func.lower(category_name))
+            .first()
+        )
+
+        if not category:
+            raise HTTPException(
+                status_code=404, detail=f"Category '{category_name}' not found"
+            )
+
+        # Query locations for this category, ensuring category_id is not NULL
+        query = db.query(models.Location).filter(
+            models.Location.category_id == category.id,
+            models.Location.category_id.isnot(None),
+        )
+
+        # Handle multiple excluded IDs
+        if exclude:
+            excluded_ids = [int(id) for id in exclude.split(",")]
+            query = query.filter(~models.Location.id.in_(excluded_ids))
+
+        locations = query.all()
+        if not locations:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No locations found for category: {category_name}",
+            )
+
+        return random.choice(locations)
+    except Exception as e:
+        logger.error(f"Error fetching location for category {category_name}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error fetching location: {str(e)}",
+        )
 
 
 # Set up logging
@@ -189,45 +249,30 @@ logger = logging.getLogger(__name__)
 @app.get("/leaderboard/", response_model=List[schemas.LeaderboardEntry])
 def get_leaderboard(db: Session = Depends(get_db)):
     try:
-        # Get total scores and number of games (every 5 rounds = 1 game) for each user
-        top_scores = (
+        leaderboard = (
             db.query(
-                models.User.id,
+                models.Leaderboard,
                 models.User.username,
-                func.sum(models.Score.score).label("total_score"),
-                func.ceil(func.count(models.Score.id) / 5.0).label("games_played"),
             )
-            .outerjoin(models.Score)
-            .group_by(models.User.id, models.User.username)
-            .having(func.count(models.Score.id) > 0)  # Only show users who have played
-            .order_by(
-                desc(
-                    func.sum(models.Score.score)
-                    / func.ceil(func.count(models.Score.id) / 5.0)
-                )
-            )  # Order by average score per game
+            .join(models.User)
+            .order_by(models.Leaderboard.highest_score.desc())
             .limit(10)
             .all()
         )
 
-        result = [
+        return [
             {
-                "id": entry[0],
-                "username": entry[1],
-                "score": round(
-                    float(entry[2] or 0) / float(entry[3] or 1)
-                ),  # Average score per game
-                "games_played": int(entry[3] or 0),
+                "id": entry.Leaderboard.user_id,
+                "username": entry.username,
+                "score": entry.Leaderboard.highest_score,
+                "last_updated": entry.Leaderboard.last_updated,
             }
-            for entry in top_scores
+            for entry in leaderboard
         ]
-
-        return result
-
     except SQLAlchemyError as e:
         logger.error(f"Database error in leaderboard: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail="Database error while fetching leaderboard",
         )
 
@@ -244,33 +289,57 @@ async def submit_guess(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated"
         )
 
-    # Calculate distance between guess and actual location
+    # Calculate distance and score
     distance = calculate_distance(
         guess.guessed_latitude,
         guess.guessed_longitude,
         guess.actual_latitude,
         guess.actual_longitude,
     )
-
-    # Calculate score based on distance
     score = calculate_score(distance)
 
-    # Save score to database with guess coordinates
+    # Save score
     db_score = models.Score(
         user_id=current_user.id,
         location_id=guess.location_id,
         score=score,
         guess_latitude=guess.guessed_latitude,
         guess_longitude=guess.guessed_longitude,
+        game_session_id=guess.game_session_id,
     )
     db.add(db_score)
+
+    # Get previous achievements count
+    previous_achievements = (
+        db.query(models.UserAchievement)
+        .filter(models.UserAchievement.user_id == current_user.id)
+        .count()
+    )
+
+    # Check and award achievements using text()
+    db.execute(
+        text("SELECT check_and_award_achievements(:user_id, :location_id, :score)"),
+        {"user_id": current_user.id, "location_id": guess.location_id, "score": score},
+    )
+
     db.commit()
     db.refresh(db_score)
+
+    # Get new achievements count
+    new_achievements_count = (
+        db.query(models.UserAchievement)
+        .filter(models.UserAchievement.user_id == current_user.id)
+        .count()
+    )
+
+    # Check if new achievements were earned
+    has_new_achievements = new_achievements_count > previous_achievements
 
     return {
         "score": score,
         "distance": round(distance, 2),
         "message": f"You were {round(distance, 2)} km away from the target!",
+        "has_new_achievements": has_new_achievements,
     }
 
 
@@ -475,10 +544,10 @@ async def update_location(
         if image:
             # Handle image upload
             file_name = f"{datetime.now().timestamp()}_{image.filename}"
-            file_path = f"images/{file_name}"
+            file_path = IMAGES_DIR / file_name
             with open(file_path, "wb") as buffer:
                 buffer.write(await image.read())
-            location.image_url = file_path
+            location.image_url = file_name
 
         # Commit changes
         db.commit()
@@ -494,3 +563,207 @@ async def update_location(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error updating location: {str(e)}",
         )
+
+
+@app.post("/game-sessions/start", response_model=schemas.GameSession)
+async def start_game_session(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    game_session = models.GameSession(user_id=current_user.id)
+    db.add(game_session)
+    db.commit()
+    db.refresh(game_session)
+    return game_session
+
+
+@app.put("/game-sessions/{session_id}/end")
+async def end_game_session(
+    session_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    session = (
+        db.query(models.GameSession)
+        .filter(
+            models.GameSession.id == session_id,
+            models.GameSession.user_id == current_user.id,
+        )
+        .first()
+    )
+
+    if not session:
+        raise HTTPException(status_code=404, detail="Game session not found")
+
+    session.ended_at = func.now()
+    db.commit()
+    return {"message": "Game session ended"}
+
+
+@app.post("/friends/add/{friend_id}")
+async def add_friend(
+    friend_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    if current_user.id == friend_id:
+        raise HTTPException(status_code=400, detail="Cannot add yourself as friend")
+
+    friend = db.query(models.User).filter(models.User.id == friend_id).first()
+    if not friend:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Check if already friends
+    existing = (
+        db.query(models.Friends)
+        .filter(
+            (
+                (models.Friends.user_id == current_user.id)
+                & (models.Friends.friend_id == friend_id)
+            )
+        )
+        .first()
+    )
+
+    if existing:
+        raise HTTPException(status_code=400, detail="Already friends")
+
+    friendship = models.Friends(user_id=current_user.id, friend_id=friend_id)
+    db.add(friendship)
+    db.commit()
+    return {"message": "Friend added successfully"}
+
+
+@app.get("/friends/list", response_model=List[schemas.User])
+async def list_friends(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    friends = (
+        db.query(models.User)
+        .join(models.Friends, models.Friends.friend_id == models.User.id)
+        .filter(models.Friends.user_id == current_user.id)
+        .all()
+    )
+    return friends
+
+
+@app.delete("/friends/remove/{friend_id}")
+async def remove_friend(
+    friend_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    friendship = (
+        db.query(models.Friends)
+        .filter(
+            models.Friends.user_id == current_user.id,
+            models.Friends.friend_id == friend_id,
+        )
+        .first()
+    )
+
+    if not friendship:
+        raise HTTPException(status_code=404, detail="Friend relationship not found")
+
+    db.delete(friendship)
+    db.commit()
+    return {"message": "Friend removed successfully"}
+
+
+@app.post("/categories/", response_model=schemas.Category)
+async def create_category(
+    category: schemas.CategoryCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not current_user or not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db_category = models.Category(name=category.name)
+    db.add(db_category)
+    db.commit()
+    db.refresh(db_category)
+    return db_category
+
+
+@app.get("/categories/", response_model=List[schemas.Category])
+async def list_categories(db: Session = Depends(get_db)):
+    return db.query(models.Category).all()
+
+
+@app.post("/achievements/", response_model=schemas.Achievement)
+async def create_achievement(
+    achievement: schemas.AchievementCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not current_user or not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db_achievement = models.Achievement(**achievement.dict())
+    db.add(db_achievement)
+    db.commit()
+    db.refresh(db_achievement)
+    return db_achievement
+
+
+@app.get("/achievements/", response_model=List[schemas.Achievement])
+async def list_achievements(db: Session = Depends(get_db)):
+    return db.query(models.Achievement).all()
+
+
+@app.get("/users/achievements/", response_model=List[schemas.UserAchievement])
+async def get_user_achievements(
+    current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    return (
+        db.query(models.UserAchievement)
+        .filter(models.UserAchievement.user_id == current_user.id)
+        .all()
+    )
+
+
+def sanitize_filename(filename):
+    """Remove spaces and special characters from filename."""
+    # Decode URL-encoded characters
+    filename = unquote(filename)
+    # Replace spaces and special characters with underscores
+    filename = re.sub(r"[^\w.-]", "_", filename)
+    return filename
+
+
+@app.get("/admin/locations/uncategorized")
+async def get_uncategorized_locations(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get all locations that have no category assigned"""
+    if not current_user or not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
+        )
+
+    locations = (
+        db.query(models.Location).filter(models.Location.category_id.is_(None)).all()
+    )
+
+    return locations

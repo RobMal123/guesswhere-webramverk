@@ -1,69 +1,69 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import '../styles/CategorySelection.css';  // Make sure the styles are imported
 
 function CategorySelection({ onCategorySelect }) {
-  const categories = [
-    { 
-      id: 'landmark', 
-      name: 'Landmarks', 
-      description: 'Famous buildings and monuments',
-      icon: '🏛️'
-    },
-    { 
-      id: 'nature', 
-      name: 'Nature', 
-      description: 'Natural landscapes and scenery',
-      icon: '🌲'
-    },
-    { 
-      id: 'city', 
-      name: 'Cities', 
-      description: 'Urban environments and cityscapes',
-      icon: '🌆'
-    },
-    { 
-      id: 'building', 
-      name: 'Buildings', 
-      description: 'Notable architectural structures',
-      icon: '🏢'
-    },
-    { 
-      id: 'park', 
-      name: 'Parks', 
-      description: 'Public parks and gardens',
-      icon: '🌳'
-    },
-    { 
-      id: 'beach', 
-      name: 'Beaches', 
-      description: 'Coastal locations and beaches',
-      icon: '🏖️'
-    },
-    { 
-      id: 'mountain', 
-      name: 'Mountains', 
-      description: 'Mountain ranges and peaks',
-      icon: '⛰️'
-    },
-    { 
-      id: 'castle', 
-      name: 'Castles', 
-      description: 'Historic castles and fortresses',
-      icon: '🏰'
-    },
-    { 
-      id: 'bridge', 
-      name: 'Bridges', 
-      description: 'Famous bridges and crossings',
-      icon: '🌉'
-    },
-    { 
-      id: 'random', 
-      name: 'Random', 
-      description: 'Random locations from all categories',
-      icon: '🎲'
-    }
-  ];
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Icons mapping for different categories
+  const categoryIcons = {
+    'Landmarks': '🏛️',
+    'Nature': '🌲',
+    'Cities': '🌆',
+    'Buildings': '🏢',
+    'Parks': '🌳',
+    'Beaches': '🏖️',
+    'Mountains': '⛰️',
+    'Castles': '🏰',
+    'Bridges': '🌉',
+  };
+
+  // Descriptions for categories
+  const categoryDescriptions = {
+    'Landmarks': 'Famous buildings and monuments',
+    'Nature': 'Natural landscapes and scenery',
+    'Cities': 'Urban environments and cityscapes',
+    'Buildings': 'Notable architectural structures',
+    'Parks': 'Public parks and gardens',
+    'Beaches': 'Coastal locations and beaches',
+    'Mountains': 'Mountain ranges and peaks',
+    'Castles': 'Historic castles and fortresses',
+    'Bridges': 'Famous bridges and crossings',
+  };
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/categories/');
+        if (!response.ok) {
+          throw new Error('Failed to fetch categories');
+        }
+        const data = await response.json();
+        
+        // Add the random option to the categories
+        const categoriesWithRandom = [
+          ...data,
+          { 
+            id: 'random', 
+            name: 'Random', 
+            description: 'Random locations from all categories' 
+          }
+        ];
+        
+        setCategories(categoriesWithRandom);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  if (loading) return <div>Loading categories...</div>;
+  if (error) return <div>Error: {error}</div>;
 
   return (
     <div className="category-selection-container">
@@ -72,13 +72,17 @@ function CategorySelection({ onCategorySelect }) {
         {categories.map(category => (
           <button
             key={category.id}
-            onClick={() => onCategorySelect(category.id)}
+            onClick={() => onCategorySelect(category.name)}
             className="category-grid-button"
           >
             <div className="category-content">
-              <span className="category-icon">{category.icon}</span>
+              <span className="category-icon">
+                {categoryIcons[category.name] || '🎲'}
+              </span>
               <span className="category-name">{category.name}</span>
-              <span className="category-description">{category.description}</span>
+              <span className="category-description">
+                {categoryDescriptions[category.name] || `${category.name} locations`}
+              </span>
             </div>
           </button>
         ))}
