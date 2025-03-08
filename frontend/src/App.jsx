@@ -8,7 +8,7 @@ import CategorySelection from './components/CategorySelection';
 import Navbar from './components/Navbar';
 import Friends from './components/Friends';
 import Profile from './components/Profile';
-import './styles/main.css';
+import LandingPage from './components/LandingPage';
 
 function AppContent() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -83,7 +83,14 @@ function AppContent() {
   };
 
   if (!isLoggedIn) {
-    return <Auth onLogin={handleLogin} />;
+    return (
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<Auth onLogin={handleLogin} />} />
+        <Route path="/register" element={<Auth onLogin={handleLogin} isRegister={true} />} />
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    );
   }
 
   return (

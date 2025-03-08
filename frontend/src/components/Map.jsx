@@ -67,15 +67,15 @@ function Map({ onGuessSubmit, showResult, correctLocation, guessedLocation, loca
   // Validate props
   if (!formattedLocation?.lat || !formattedLocation?.lng || !locationId) {
     console.error('Missing required props:', { correctLocation: formattedLocation, locationId });
-    return <div>Missing required location data</div>;
+    return <div className="text-red-600 p-4">Missing required location data</div>;
   }
 
   return (
-    <div className="map-container">
+    <div className="w-full h-[400px] rounded-lg overflow-hidden shadow-md">
       <MapContainer
         center={[20, 0]}
         zoom={2}
-        style={{ height: '400px', width: '100%' }}
+        className="w-full h-full"
       >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

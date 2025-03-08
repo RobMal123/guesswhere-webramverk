@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import '../styles/CategorySelection.css';  // Make sure the styles are imported
 
 function CategorySelection({ onCategorySelect }) {
   const [categories, setCategories] = useState([]);
@@ -62,25 +61,32 @@ function CategorySelection({ onCategorySelect }) {
     fetchCategories();
   }, []);
 
-  if (loading) return <div>Loading categories...</div>;
-  if (error) return <div>Error: {error}</div>;
+  if (loading) return <div className="text-center p-4">Loading categories...</div>;
+  if (error) return <div className="text-center p-4 text-red-600">Error: {error}</div>;
 
   return (
-    <div className="category-selection-container">
-      <h2 className="category-title">Choose category</h2>
-      <div className="category-grid-container">
+    <div className="p-8 w-full max-w-7xl mx-auto">
+      <h2 className="text-2xl font-bold mb-8 text-gray-800">
+        Choose category
+      </h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {categories.map(category => (
           <button
             key={category.id}
             onClick={() => onCategorySelect(category.name)}
-            className="category-grid-button"
+            className="group relative flex flex-col items-center justify-center p-6 h-40 rounded-2xl 
+                     bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700
+                     text-white transition-all duration-300 transform hover:scale-[1.02]
+                     shadow-md hover:shadow-lg"
           >
-            <div className="category-content">
-              <span className="category-icon">
+            <div className="flex flex-col items-center space-y-2">
+              <span className="text-4xl mb-2 filter drop-shadow-md">
                 {categoryIcons[category.name] || '🎲'}
               </span>
-              <span className="category-name">{category.name}</span>
-              <span className="category-description">
+              <span className="text-lg font-bold filter drop-shadow-sm">
+                {category.name}
+              </span>
+              <span className="text-sm text-center opacity-90 px-2">
                 {categoryDescriptions[category.name] || `${category.name} locations`}
               </span>
             </div>

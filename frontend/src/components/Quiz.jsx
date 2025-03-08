@@ -186,22 +186,22 @@ function Quiz({ category, onGameComplete }) {
     }
   };
 
-  if (isLoading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
+  if (isLoading) return <div className="text-center p-8">Loading...</div>;
+  if (error) return <div className="text-center p-8 text-red-600">Error: {error}</div>;
 
   return (
-    <div className="quiz-container">
-      <div className="game-info p-4">
-        <div className="text-lg font-bold">Round {roundNumber} of {TOTAL_ROUNDS}</div>
-        <div>Total Score: {totalScore}</div>
+    <div className="bg-white rounded-lg shadow-lg p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <div className="text-lg font-bold text-gray-800">Round {roundNumber} of {TOTAL_ROUNDS}</div>
+        <div className="text-gray-700">Total Score: {totalScore}</div>
       </div>
 
       {currentImage && (
-        <div className="image-container">
+        <div className="w-full h-[300px] overflow-hidden rounded-lg shadow-md">
           <img 
             src={`http://localhost:8000/${currentImage}`} 
             alt="Guess this location" 
-            className="location-image"
+            className="w-full h-full object-cover"
             onError={(e) => {
               console.error('Image failed to load:', e.target.src);
               setError('Failed to load image');
@@ -210,21 +210,25 @@ function Quiz({ category, onGameComplete }) {
         </div>
       )}
       
-      <Map
-        onGuessSubmit={handleGuessSubmit}
-        showResult={showResult}
-        correctLocation={correctLocation}
-        guessedLocation={guessedLocation}
-        locationId={locationId}
-      />
+      <div className="w-full h-[400px] rounded-lg overflow-hidden">
+        <Map
+          onGuessSubmit={handleGuessSubmit}
+          showResult={showResult}
+          correctLocation={correctLocation}
+          guessedLocation={guessedLocation}
+          locationId={locationId}
+        />
+      </div>
       
       {showResult && (
-        <div className="result-container">
-          <h2>Round Score: {score} points</h2>
-          <p>You were {distance} km away from {locationName}!</p>
+        <div className="text-center space-y-4">
+          <h2 className="text-xl font-bold text-gray-800">Round Score: {score} points</h2>
+          <p className="text-gray-700">You were {distance} km away from {locationName}!</p>
           <button 
             onClick={handleNextRound}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg 
+                     shadow-md hover:from-blue-600 hover:to-blue-700 transform hover:scale-105 
+                     transition-all duration-200"
           >
             {roundNumber >= TOTAL_ROUNDS ? 'Finish Game' : 'Next Location'}
           </button>

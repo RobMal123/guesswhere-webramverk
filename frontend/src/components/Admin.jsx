@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import '../styles/Admin.css';
 
 function Admin() {
   const [stats, setStats] = useState({
@@ -354,54 +353,70 @@ function Admin() {
   if (error) return <div>Error: {error}</div>;
 
   return (
-    <div className="admin-dashboard">
-      {message && <div className="success-message">{message}</div>}
-      {error && <div className="error-message">{error}</div>}
-      <h1>Admin Dashboard</h1>
+    <div className="p-8">
+      {message && (
+        <div className="bg-green-100 text-green-700 p-4 rounded-lg mb-6 text-center">
+          {message}
+        </div>
+      )}
+      {error && (
+        <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-6 text-center">
+          {error}
+        </div>
+      )}
+      <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
       
-      <div className="stats-grid">
-        <div className="stat-card">
-          <h3>Total Users</h3>
-          <p>{stats.totalUsers}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-gray-600 text-sm mb-2">Total Users</h3>
+          <p className="text-2xl font-bold">{stats.totalUsers}</p>
         </div>
-        <div className="stat-card">
-          <h3>Total Locations</h3>
-          <p>{stats.totalLocations}</p>
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-gray-600 text-sm mb-2">Total Locations</h3>
+          <p className="text-2xl font-bold">{stats.totalLocations}</p>
         </div>
-        <div className="stat-card">
-          <h3>Total Guesses</h3>
-          <p>{stats.totalGuesses}</p>
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-gray-600 text-sm mb-2">Total Guesses</h3>
+          <p className="text-2xl font-bold">{stats.totalGuesses}</p>
         </div>
-        <div className="stat-card">
-          <h3>Average Score</h3>
-          <p>{stats.averageScore.toFixed(2)}</p>
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-gray-600 text-sm mb-2">Average Score</h3>
+          <p className="text-2xl font-bold">{stats.averageScore.toFixed(2)}</p>
         </div>
       </div>
 
-      <section className="categories-section">
-        <h2>Manage Categories</h2>
-        <div className="categories-container">
-          <div className="add-category-form">
-            <form onSubmit={handleCategorySubmit}>
-              <div className="form-group">
-                <label htmlFor="categoryName">New Category Name:</label>
+      <section className="bg-white rounded-lg shadow p-6 mb-8">
+        <h2 className="text-xl font-bold mb-6">Manage Categories</h2>
+        <div className="space-y-6">
+          <div className="max-w-md">
+            <form onSubmit={handleCategorySubmit} className="space-y-4">
+              <div>
+                <label htmlFor="categoryName" className="block text-sm font-medium text-gray-700 mb-1">
+                  New Category Name:
+                </label>
                 <input
                   id="categoryName"
                   type="text"
                   value={newCategory.name}
                   onChange={(e) => setNewCategory({ name: e.target.value })}
                   required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              <button type="submit">Add Category</button>
+              <button 
+                type="submit"
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Add Category
+              </button>
             </form>
           </div>
           
-          <div className="existing-categories">
-            <h3>Existing Categories</h3>
-            <div className="categories-grid">
+          <div>
+            <h3 className="text-lg font-semibold mb-4">Existing Categories</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {categories.map(category => (
-                <div key={category.id} className="category-card">
+                <div key={category.id} className="bg-gray-50 p-3 rounded-md text-center">
                   <span>{category.name}</span>
                 </div>
               ))}
@@ -410,36 +425,45 @@ function Admin() {
         </div>
       </section>
 
-      <section className="achievements-section">
-        <h2>Manage Achievements</h2>
-        <div className="achievements-container">
-          <div className="add-achievement-form">
-            <form onSubmit={handleAchievementSubmit}>
-              <div className="form-group">
-                <label htmlFor="achievementName">Name:</label>
+      <section className="bg-white rounded-lg shadow p-6 mb-8">
+        <h2 className="text-xl font-bold mb-6">Manage Achievements</h2>
+        <div className="space-y-6">
+          <div className="max-w-md">
+            <form onSubmit={handleAchievementSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="achievementName" className="block text-sm font-medium text-gray-700 mb-1">
+                  Name:
+                </label>
                 <input
                   id="achievementName"
                   type="text"
                   value={newAchievement.name}
                   onChange={(e) => setNewAchievement({...newAchievement, name: e.target.value})}
                   required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              <div className="form-group">
-                <label htmlFor="achievementDescription">Description:</label>
+              <div>
+                <label htmlFor="achievementDescription" className="block text-sm font-medium text-gray-700 mb-1">
+                  Description:
+                </label>
                 <textarea
                   id="achievementDescription"
                   value={newAchievement.description}
                   onChange={(e) => setNewAchievement({...newAchievement, description: e.target.value})}
                   required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              <div className="form-group">
-                <label htmlFor="achievementCategory">Category (optional):</label>
+              <div>
+                <label htmlFor="achievementCategory" className="block text-sm font-medium text-gray-700 mb-1">
+                  Category (optional):
+                </label>
                 <select
                   id="achievementCategory"
                   value={newAchievement.category_id}
                   onChange={(e) => setNewAchievement({...newAchievement, category_id: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">No specific category</option>
                   {categories.map(category => (
@@ -449,17 +473,22 @@ function Admin() {
                   ))}
                 </select>
               </div>
-              <div className="form-group">
-                <label htmlFor="achievementCountry">Country (optional):</label>
+              <div>
+                <label htmlFor="achievementCountry" className="block text-sm font-medium text-gray-700 mb-1">
+                  Country (optional):
+                </label>
                 <input
                   id="achievementCountry"
                   type="text"
                   value={newAchievement.country}
                   onChange={(e) => setNewAchievement({...newAchievement, country: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              <div className="form-group">
-                <label htmlFor="achievementPoints">Points Required:</label>
+              <div>
+                <label htmlFor="achievementPoints" className="block text-sm font-medium text-gray-700 mb-1">
+                  Points Required:
+                </label>
                 <input
                   id="achievementPoints"
                   type="number"
@@ -468,29 +497,35 @@ function Admin() {
                   value={newAchievement.points_required}
                   onChange={(e) => setNewAchievement({...newAchievement, points_required: e.target.value})}
                   required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              <button type="submit">Add Achievement</button>
+              <button 
+                type="submit"
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Add Achievement
+              </button>
             </form>
           </div>
 
-          <div className="existing-achievements">
-            <h3>Achievement Tiers</h3>
+          <div>
+            <h3 className="text-lg font-semibold mb-4">Achievement Tiers</h3>
             {Object.entries(achievementTiers).map(([tier, { name, range, color }]) => (
-              <div key={tier} className="achievement-tier">
-                <h4 style={{ color }}>{name} ({range} points)</h4>
-                <div className="achievements-grid">
+              <div key={tier} className="mb-4">
+                <h4 className="text-gray-600 text-sm mb-2">{name} ({range} points)</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {achievements
                     .filter(a => getTierForPoints(a.points_required) === tier)
                     .map(achievement => (
-                      <div key={achievement.id} className="achievement-card" style={{ borderLeft: `4px solid ${color}` }}>
-                        <h4>{achievement.name}</h4>
-                        <p>{achievement.description}</p>
-                        <p>Points Required: {achievement.points_required}</p>
+                      <div key={achievement.id} className="bg-gray-50 p-3 rounded-md text-center">
+                        <h5 className="text-gray-600 text-sm mb-2">{achievement.name}</h5>
+                        <p className="text-gray-500 text-sm">{achievement.description}</p>
+                        <p className="text-gray-500 text-sm">Points Required: {achievement.points_required}</p>
                         {achievement.category_id && (
-                          <p>Category: {categories.find(c => c.id === achievement.category_id)?.name}</p>
+                          <p className="text-gray-500 text-sm">Category: {categories.find(c => c.id === achievement.category_id)?.name}</p>
                         )}
-                        {achievement.country && <p>Country: {achievement.country}</p>}
+                        {achievement.country && <p className="text-gray-500 text-sm">Country: {achievement.country}</p>}
                       </div>
                     ))}
                 </div>
@@ -501,11 +536,13 @@ function Admin() {
       </section>
 
       <div className="admin-sections">
-        <section className="locations-section">
-          <h2>Add New Location</h2>
-          <form onSubmit={handleLocationSubmit} className="add-location-form">
-            <div className="form-group">
-              <label htmlFor="name">Location Name:</label>
+        <section className="bg-white rounded-lg shadow p-6 mb-8">
+          <h2 className="text-xl font-bold mb-6">Add New Location</h2>
+          <form onSubmit={handleLocationSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                Location Name:
+              </label>
               <input
                 id="name"
                 type="text"
@@ -513,10 +550,13 @@ function Admin() {
                 value={newLocation.name}
                 onChange={(e) => setNewLocation({...newLocation, name: e.target.value})}
                 required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <div className="form-group">
-              <label htmlFor="latitude">Latitude:</label>
+            <div>
+              <label htmlFor="latitude" className="block text-sm font-medium text-gray-700 mb-1">
+                Latitude:
+              </label>
               <input
                 id="latitude"
                 type="number"
@@ -525,10 +565,13 @@ function Admin() {
                 value={newLocation.latitude}
                 onChange={(e) => setNewLocation({...newLocation, latitude: e.target.value})}
                 required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <div className="form-group">
-              <label htmlFor="longitude">Longitude:</label>
+            <div>
+              <label htmlFor="longitude" className="block text-sm font-medium text-gray-700 mb-1">
+                Longitude:
+              </label>
               <input
                 id="longitude"
                 type="number"
@@ -537,15 +580,19 @@ function Admin() {
                 value={newLocation.longitude}
                 onChange={(e) => setNewLocation({...newLocation, longitude: e.target.value})}
                 required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <div className="form-group">
-              <label htmlFor="category">Category:</label>
+            <div>
+              <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
+                Category:
+              </label>
               <select
                 id="category"
                 value={newLocation.category_id}
                 onChange={(e) => setNewLocation({...newLocation, category_id: e.target.value})}
                 required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Select a category</option>
                 {categories.map(category => (
@@ -555,49 +602,63 @@ function Admin() {
                 ))}
               </select>
             </div>
-            <div className="form-group">
-              <label htmlFor="description">Description:</label>
+            <div>
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                Description:
+              </label>
               <textarea
                 id="description"
                 value={newLocation.description}
                 onChange={(e) => setNewLocation({...newLocation, description: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <div className="form-group">
-              <label htmlFor="difficulty">Difficulty Level:</label>
+            <div>
+              <label htmlFor="difficulty" className="block text-sm font-medium text-gray-700 mb-1">
+                Difficulty Level:
+              </label>
               <select
                 id="difficulty"
                 value={newLocation.difficulty_level}
                 onChange={(e) => setNewLocation({...newLocation, difficulty_level: e.target.value})}
                 required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="easy">Easy</option>
                 <option value="medium">Medium</option>
                 <option value="hard">Hard</option>
               </select>
             </div>
-            <div className="form-group">
-              <label htmlFor="country">Country:</label>
+            <div>
+              <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-1">
+                Country:
+              </label>
               <input
                 id="country"
                 type="text"
                 value={newLocation.country}
                 onChange={(e) => setNewLocation({...newLocation, country: e.target.value})}
                 required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <div className="form-group">
-              <label htmlFor="region">Region:</label>
+            <div>
+              <label htmlFor="region" className="block text-sm font-medium text-gray-700 mb-1">
+                Region:
+              </label>
               <input
                 id="region"
                 type="text"
                 value={newLocation.region}
                 onChange={(e) => setNewLocation({...newLocation, region: e.target.value})}
                 required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <div className="form-group">
-              <label htmlFor="image">Image:</label>
+            <div>
+              <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">
+                Image:
+              </label>
               <input
                 id="image"
                 type="file"
@@ -610,163 +671,94 @@ function Admin() {
                   }
                 }}
                 required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <button type="submit">Add Location</button>
+            <button 
+              type="submit"
+              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Add Location
+            </button>
           </form>
+        </section>
 
-          <h2>Existing Locations</h2>
-          <div className="locations-grid">
+        <section className="bg-white rounded-lg shadow p-6 mb-8">
+          <h2 className="text-xl font-bold mb-6">Existing Locations</h2>
+          <div className="space-y-4">
             {locations.map(location => (
-              <div key={location.id} className="location-card">
-                <img src={`http://localhost:8000/${location.image_url}`} alt="Location" />
-                {editingLocation?.id === location.id ? (
-                  <form onSubmit={handleEditSubmit} className="edit-form">
-                    <input
-                      type="number"
-                      step="any"
-                      placeholder="Latitude"
-                      value={editingLocation.latitude}
-                      onChange={(e) => setEditingLocation({
-                        ...editingLocation,
-                        latitude: e.target.value
-                      })}
-                      required
-                    />
-                    <input
-                      type="number"
-                      step="any"
-                      placeholder="Longitude"
-                      value={editingLocation.longitude}
-                      onChange={(e) => setEditingLocation({
-                        ...editingLocation,
-                        longitude: e.target.value
-                      })}
-                      required
-                    />
-                    <input
-                      type="text"
-                      placeholder="Location Name"
-                      value={editingLocation.name}
-                      onChange={(e) => setEditingLocation({
-                        ...editingLocation,
-                        name: e.target.value
-                      })}
-                      required
-                    />
-                    <select
-                      value={editingLocation.category_id}
-                      onChange={(e) => setEditingLocation({
-                        ...editingLocation,
-                        category_id: e.target.value
-                      })}
-                      required
-                    >
-                      <option value="">Select a category</option>
-                      {categories.map(category => (
-                        <option key={category.id} value={category.id}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
-                    <textarea
-                      value={editingLocation.description}
-                      onChange={(e) => setEditingLocation({
-                        ...editingLocation,
-                        description: e.target.value
-                      })}
-                    />
-                    <select
-                      value={editingLocation.difficulty_level}
-                      onChange={(e) => setEditingLocation({
-                        ...editingLocation,
-                        difficulty_level: e.target.value
-                      })}
-                      required
-                    >
-                      <option value="easy">Easy</option>
-                      <option value="medium">Medium</option>
-                      <option value="hard">Hard</option>
-                    </select>
-                    <input
-                      type="text"
-                      placeholder="Country"
-                      value={editingLocation.country}
-                      onChange={(e) => setEditingLocation({
-                        ...editingLocation,
-                        country: e.target.value
-                      })}
-                      required
-                    />
-                    <input
-                      type="text"
-                      placeholder="Region"
-                      value={editingLocation.region}
-                      onChange={(e) => setEditingLocation({
-                        ...editingLocation,
-                        region: e.target.value
-                      })}
-                      required
-                    />
-                    <input
-                      type="file"
-                      onChange={(e) => setEditingLocation({
-                        ...editingLocation,
-                        image: e.target.files[0]
-                      })}
-                    />
-                    <div className="edit-buttons">
-                      <button type="submit" className="save-button">Save</button>
-                      <button type="button" onClick={handleCancelEdit} className="cancel-button">Cancel</button>
-                    </div>
-                  </form>
-                ) : (
-                  <>
-                    <p>Name: {location.name}</p>
-                    <p>Lat: {location.latitude}</p>
-                    <p>Long: {location.longitude}</p>
-                    <p className="location-category">
+              <div key={location.id} className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <img src={`http://localhost:8000/${location.image_url}`} alt="Location" className="w-16 h-16 rounded-md" />
+                  <div>
+                    <p className="text-gray-600 text-sm">{location.name}</p>
+                    <p className="text-gray-500 text-sm">Lat: {location.latitude}</p>
+                    <p className="text-gray-500 text-sm">Long: {location.longitude}</p>
+                    <p className="text-gray-500 text-sm location-category">
                       Category: {location.category_id}
                     </p>
-                    <div className="location-buttons">
+                  </div>
+                </div>
+                <div className="flex items-center space-x-4">
+                  {editingLocation?.id === location.id ? (
+                    <>
                       <button 
-                        className="edit-button"
+                        type="button"
+                        onClick={handleCancelEdit}
+                        className="text-gray-500 hover:text-gray-700"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        type="submit"
+                        form="edit-location-form"
+                        className="text-blue-500 hover:text-blue-700"
+                      >
+                        Save
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button 
+                        type="button"
                         onClick={() => handleEditClick(location)}
+                        className="text-gray-500 hover:text-gray-700"
                       >
                         Edit
                       </button>
                       <button 
-                        className="delete-button"
+                        type="button"
                         onClick={() => handleDeleteLocation(location.id)}
+                        className="text-red-500 hover:text-red-700"
                       >
                         Delete
                       </button>
-                    </div>
-                  </>
-                )}
+                    </>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="users-section">
-          <h2>Users</h2>
-          <table>
+        <section className="bg-white rounded-lg shadow p-6 mb-8">
+          <h2 className="text-xl font-bold mb-6">Users</h2>
+          <table className="w-full">
             <thead>
               <tr>
-                <th>Username</th>
-                <th>Email</th>
-                <th>Total Score</th>
-                <th>Join Date</th>
+                <th className="text-left text-sm font-medium text-gray-500 px-4 py-3">Username</th>
+                <th className="text-left text-sm font-medium text-gray-500 px-4 py-3">Email</th>
+                <th className="text-left text-sm font-medium text-gray-500 px-4 py-3">Total Score</th>
+                <th className="text-left text-sm font-medium text-gray-500 px-4 py-3">Join Date</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="bg-white divide-y divide-gray-200">
               {users.map(user => (
                 <tr key={user.id}>
-                  <td>{user.username}</td>
-                  <td>{user.email}</td>
-                  <td>{user.total_score}</td>
-                  <td>{new Date(user.created_at).toLocaleDateString()}</td>
+                  <td className="px-4 py-4 text-sm text-gray-800">{user.username}</td>
+                  <td className="px-4 py-4 text-sm text-gray-800">{user.email}</td>
+                  <td className="px-4 py-4 text-sm text-gray-800">{user.total_score}</td>
+                  <td className="px-4 py-4 text-sm text-gray-800">{new Date(user.created_at).toLocaleDateString()}</td>
                 </tr>
               ))}
             </tbody>

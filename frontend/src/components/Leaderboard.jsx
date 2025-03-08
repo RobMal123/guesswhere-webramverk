@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import '../styles/Leaderboard.css';
 
 function Leaderboard({ category }) {
   const [leaderboardData, setLeaderboardData] = useState([]);
@@ -78,35 +77,63 @@ function Leaderboard({ category }) {
 
   if (!leaderboardData.length) {
     return (
-      <div className="leaderboard-container">
-        <h2 className="leaderboard-title">Leaderboard - {category || 'All Categories'}</h2>
+      <div className="bg-white rounded-2xl p-8 shadow-lg mx-auto my-8 max-w-4xl">
+        <h2 className="text-xl font-semibold text-center text-blue-700 mb-6">
+          Leaderboard - {category || 'All Categories'}
+        </h2>
         <p className="text-center text-gray-600">No scores recorded yet.</p>
       </div>
     );
   }
 
   return (
-    <div className="leaderboard-container">
-      <h2 className="leaderboard-title">Leaderboard - {category || 'All Categories'}</h2>
-      <div className="leaderboard-table-container">
-        <table className="leaderboard-table">
+    <div className="bg-white rounded-2xl p-8 shadow-lg mx-auto my-8 max-w-4xl">
+      <h2 className="text-xl font-semibold text-center text-blue-700 mb-6">
+        Leaderboard - {category || 'All Categories'}
+      </h2>
+      
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse">
           <thead>
-            <tr>
-              <th>Rank</th>
-              <th>Player</th>
-              <th>Average Score</th>
-              <th>Total Score</th>
-              <th>Games</th>
+            <tr className="bg-gray-50">
+              <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider border-b">
+                Rank
+              </th>
+              <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider border-b">
+                Player
+              </th>
+              <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider border-b">
+                Average Score
+              </th>
+              <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider border-b">
+                Total Score
+              </th>
+              <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider border-b">
+                Games
+              </th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-gray-200">
             {leaderboardData.map((entry, index) => (
-              <tr key={entry.id}>
-                <td>#{index + 1}</td>
-                <td>{entry.username}</td>
-                <td>{entry.average_score}%</td>
-                <td>{entry.total_score}</td>
-                <td>{entry.games_played}</td>
+              <tr 
+                key={entry.id}
+                className="hover:bg-gray-50 transition-colors"
+              >
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  #{index + 1}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">
+                  {entry.username}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  {entry.average_score}%
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  {entry.total_score}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  {entry.games_played}
+                </td>
               </tr>
             ))}
           </tbody>

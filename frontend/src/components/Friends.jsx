@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import '../styles/Friends.css';
 
 function Friends() {
   const [friends, setFriends] = useState([]);
@@ -63,26 +62,47 @@ function Friends() {
   };
 
   return (
-    <div className="friends-container">
-      <h2>Friends</h2>
-      {error && <div className="error-message">{error}</div>}
+    <div className="max-w-3xl mx-auto p-6">
+      <h2 className="text-2xl font-bold mb-6 text-gray-800">Friends</h2>
       
-      <div className="friends-search">
+      {error && (
+        <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-4">
+          {error}
+        </div>
+      )}
+      
+      <div className="mb-6">
         <input
           type="text"
           placeholder="Search users..."
           value={searchUsername}
           onChange={(e) => setSearchUsername(e.target.value)}
+          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
       </div>
 
-      <div className="friends-list">
+      <div className="space-y-3">
         {friends.map(friend => (
-          <div key={friend.id} className="friend-card">
-            <span>{friend.username}</span>
-            <button onClick={() => removeFriend(friend.id)}>Remove</button>
+          <div 
+            key={friend.id} 
+            className="flex justify-between items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <span className="text-gray-800 font-medium">
+              {friend.username}
+            </span>
+            <button 
+              onClick={() => removeFriend(friend.id)}
+              className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+            >
+              Remove
+            </button>
           </div>
         ))}
+        {friends.length === 0 && (
+          <p className="text-center text-gray-500 py-4">
+            No friends added yet
+          </p>
+        )}
       </div>
     </div>
   );
