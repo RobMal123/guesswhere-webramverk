@@ -71,7 +71,7 @@ function Map({ onGuessSubmit, showResult, correctLocation, guessedLocation, loca
   }
 
   return (
-    <div className="w-full h-[400px] rounded-lg overflow-hidden shadow-md">
+    <div className="w-full h-[400px] rounded-lg overflow-hidden shadow-md relative z-0">
       <MapContainer
         center={[20, 0]}
         zoom={2}

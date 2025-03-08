@@ -21,6 +21,7 @@ function Quiz({ category, onGameComplete }) {
   const [newAchievements, setNewAchievements] = useState([]);
   const [showAchievement, setShowAchievement] = useState(false);
   const [currentAchievement, setCurrentAchievement] = useState(null);
+  const [showMap, setShowMap] = useState(false);
 
   useEffect(() => {
     // Reset game state when category changes
@@ -188,6 +189,9 @@ function Quiz({ category, onGameComplete }) {
   };
 
   const handleNextRound = () => {
+    // Reset to image view
+    setShowMap(false);
+    
     if (roundNumber >= TOTAL_ROUNDS) {
       // Game complete
       handleGameComplete(totalScore);
@@ -202,37 +206,62 @@ function Quiz({ category, onGameComplete }) {
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6 space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-4">
         <div className="text-lg font-bold text-gray-800">Round {roundNumber} of {TOTAL_ROUNDS}</div>
         <div className="text-gray-700">Total Score: {totalScore}</div>
       </div>
 
-      {currentImage && (
-        <div className="w-full h-[300px] overflow-hidden rounded-lg shadow-md">
-          <img 
-            src={`http://localhost:8000/${currentImage}`} 
-            alt="Guess this location" 
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              console.error('Image failed to load:', e.target.src);
-              setError('Failed to load image');
-            }}
+      {/* Toggle buttons */}
+      <div className="flex gap-4 mb-4">
+        <button
+          onClick={() => setShowMap(false)}
+          className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all duration-200
+            ${!showMap 
+              ? 'bg-blue-500 text-white shadow-md' 
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+        >
+          View Image
+        </button>
+        <button
+          onClick={() => setShowMap(true)}
+          className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all duration-200
+            ${showMap 
+              ? 'bg-blue-500 text-white shadow-md' 
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+        >
+          View Map
+        </button>
+      </div>
+
+      {/* Content container with smooth transition */}
+      <div className="relative w-full" style={{ height: 'calc(100vh - 300px)' }}>
+        {currentImage && (
+          <div className={`absolute w-full h-full transition-opacity duration-300 ${showMap ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+            <img 
+              src={`http://localhost:8000/${currentImage}`} 
+              alt="Guess this location" 
+              className="w-full h-full object-contain bg-gray-50 rounded-lg"
+              onError={(e) => {
+                console.error('Image failed to load:', e.target.src);
+                setError('Failed to load image');
+              }}
+            />
+          </div>
+        )}
+        
+        <div className={`absolute w-full h-full transition-opacity duration-300 ${!showMap ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+          <Map
+            onGuessSubmit={handleGuessSubmit}
+            showResult={showResult}
+            correctLocation={correctLocation}
+            guessedLocation={guessedLocation}
+            locationId={locationId}
           />
         </div>
-      )}
-      
-      <div className="w-full h-[400px] rounded-lg overflow-hidden">
-        <Map
-          onGuessSubmit={handleGuessSubmit}
-          showResult={showResult}
-          correctLocation={correctLocation}
-          guessedLocation={guessedLocation}
-          locationId={locationId}
-        />
       </div>
       
       {showResult && (
-        <div className="text-center space-y-4">
+        <div className="text-center space-y-4 mt-4">
           <h2 className="text-xl font-bold text-gray-800">Round Score: {score} points</h2>
           <p className="text-gray-700">You were {distance} km away from {locationName}!</p>
           <button 

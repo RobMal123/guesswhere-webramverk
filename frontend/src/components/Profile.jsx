@@ -10,25 +10,45 @@ function Profile() {
   const [profileUser, setProfileUser] = useState(null);
 
   const achievementTiers = {
-    bronze: {
-      name: "Bronze Tier",
-      range: "0-3500",
-      color: "#CD7F32"
-    },
-    silver: {
-      name: "Silver Tier",
-      range: "3500-4000",
-      color: "#C0C0C0"
+    diamond: {
+      name: "Diamond Tier",
+      range: "4750-5000",
+      styles: {
+        background: 'from-sky-400 to-sky-500',
+        border: 'border-sky-400/20',
+        title: 'text-sky-100',
+        text: 'text-sky-50/90'
+      }
     },
     gold: {
       name: "Gold Tier",
       range: "4000-4750",
-      color: "#FFD700"
+      styles: {
+        background: 'from-yellow-400 to-yellow-500',
+        border: 'border-yellow-400/20',
+        title: 'text-yellow-100',
+        text: 'text-yellow-50/90'
+      }
     },
-    diamond: {
-      name: "Diamond Tier",
-      range: "4750-5000",
-      color: "#B9F2FF"
+    silver: {
+      name: "Silver Tier",
+      range: "3500-4000",
+      styles: {
+        background: 'from-gray-400 to-gray-500',
+        border: 'border-gray-400/20',
+        title: 'text-gray-100',
+        text: 'text-gray-50/90'
+      }
+    },
+    bronze: {
+      name: "Bronze Tier",
+      range: "0-3500",
+      styles: {
+        background: 'from-amber-600 to-amber-700',
+        border: 'border-amber-500/20',
+        title: 'text-amber-100',
+        text: 'text-amber-50/90'
+      }
     }
   };
 
@@ -100,15 +120,13 @@ function Profile() {
       <div className="space-y-8">
         <h2 className="text-2xl font-bold text-gray-800 mb-6">Achievements</h2>
         
-        {Object.entries(achievementTiers).map(([tier, { name, range, color }]) => (
+        {Object.entries(achievementTiers).map(([tier, { name, range, styles }]) => (
           <div key={tier} className="mb-8">
-            <h3 
-              className={`text-xl font-semibold mb-4 pb-2 border-b ${
-                tier === 'diamond' ? 'text-sky-500' :
+            <h3 className={`text-xl font-semibold mb-4 pb-2 border-b 
+              ${tier === 'diamond' ? 'text-sky-500' :
                 tier === 'gold' ? 'text-yellow-500' :
                 tier === 'silver' ? 'text-gray-600' :
-                'text-amber-700' // bronze
-              }`}
+                'text-amber-700'}`}
             >
               {name} ({range} points)
             </h3>
@@ -117,16 +135,20 @@ function Profile() {
               {achievements[tier]?.map((achievement) => (
                 <div 
                   key={achievement.achievement.id} 
-                  className="bg-white p-4 rounded-lg shadow transition-transform hover:scale-102"
-                  style={{ borderLeft: `4px solid ${color}` }}
+                  className={`bg-gradient-to-r ${styles.background} p-6 rounded-xl 
+                            shadow-lg transition-all duration-300 hover:shadow-xl 
+                            border ${styles.border} backdrop-blur-sm`}
                 >
-                  <h4 className="text-lg font-semibold text-gray-800 mb-2">
-                    {achievement.achievement.name}
-                  </h4>
-                  <p className="text-gray-600 text-sm mb-3">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-2xl">🏆</span>
+                    <h4 className={`text-base font-semibold ${styles.title}`}>
+                      {achievement.achievement.name}
+                    </h4>
+                  </div>
+                  <p className={`${styles.text} text-sm leading-relaxed mb-3`}>
                     {achievement.achievement.description}
                   </p>
-                  <span className="text-xs text-gray-500 block">
+                  <span className={`text-xs ${styles.text} block opacity-75`}>
                     Earned: {new Date(achievement.earned_at).toLocaleDateString()}
                   </span>
                 </div>

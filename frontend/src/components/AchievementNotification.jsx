@@ -1,24 +1,84 @@
 import React from 'react';
 
 function AchievementNotification({ achievement, onClose }) {
+  // Determine tier based on points required
+  const getTierStyles = (points) => {
+    if (points >= 4750) {
+      return {
+        background: 'from-sky-400 to-sky-500',
+        border: 'border-sky-400/20',
+        title: 'from-sky-100 to-white',
+        heading: 'text-sky-100',
+        text: 'text-sky-50/90',
+        hover: 'hover:bg-sky-400/20',
+        ring: 'focus:ring-sky-300 focus:ring-offset-sky-500'
+      };
+    }
+    if (points >= 4000) {
+      return {
+        background: 'from-yellow-400 to-yellow-500',
+        border: 'border-yellow-400/20',
+        title: 'from-yellow-100 to-white',
+        heading: 'text-yellow-100',
+        text: 'text-yellow-50/90',
+        hover: 'hover:bg-yellow-400/20',
+        ring: 'focus:ring-yellow-300 focus:ring-offset-yellow-500'
+      };
+    }
+    if (points >= 3500) {
+      return {
+        background: 'from-gray-400 to-gray-500',
+        border: 'border-gray-400/20',
+        title: 'from-gray-100 to-white',
+        heading: 'text-gray-100',
+        text: 'text-gray-50/90',
+        hover: 'hover:bg-gray-400/20',
+        ring: 'focus:ring-gray-300 focus:ring-offset-gray-500'
+      };
+    }
+    return {
+      background: 'from-amber-600 to-amber-700',
+      border: 'border-amber-500/20',
+      title: 'from-amber-100 to-white',
+      heading: 'text-amber-100',
+      text: 'text-amber-50/90',
+      hover: 'hover:bg-amber-500/20',
+      ring: 'focus:ring-amber-300 focus:ring-offset-amber-700'
+    };
+  };
+
+  const styles = getTierStyles(achievement.points_required);
+
   return (
-    <div className="fixed bottom-5 right-5 bg-white p-4 rounded-lg shadow-lg animate-slide-in flex items-start gap-4 z-50 max-w-sm">
-      <div className="flex-1">
-        <h3 className="text-gray-800 mb-2 text-base font-semibold">
-          🏆 Achievement Unlocked!
-        </h3>
-        <h4 className="text-gray-800 mb-1 text-sm font-medium">
+    <div className={`fixed bottom-5 right-5 bg-gradient-to-r ${styles.background} p-6 
+                    rounded-xl shadow-2xl animate-slide-in flex items-start gap-4 z-[9999] 
+                    max-w-sm border ${styles.border} backdrop-blur-sm`}>
+      <div className="flex-1 text-white">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-2xl animate-bounce">🏆</span>
+          <h3 className={`text-lg font-bold bg-gradient-to-r ${styles.title} 
+                         bg-clip-text text-transparent`}>
+            Achievement Unlocked!
+          </h3>
+        </div>
+        
+        <h4 className={`text-base font-semibold mb-2 ${styles.heading}`}>
           {achievement.name}
         </h4>
-        <p className="text-gray-600 text-sm">
+        
+        <p className={`text-sm ${styles.text} leading-relaxed`}>
           {achievement.description}
         </p>
       </div>
+      
       <button 
         onClick={onClose}
-        className="text-gray-500 hover:text-gray-700 text-xl leading-none focus:outline-none"
+        className="bg-red-500 hover:bg-red-600 transition-colors duration-200 
+                   w-6 h-6 flex items-center justify-center rounded-full 
+                   focus:outline-none focus:ring-2 focus:ring-red-400 
+                   focus:ring-offset-2 shadow-sm"
       >
-        ×
+        <span className="text-white text-xl leading-none">&times;</span>
       </button>
     </div>
   );
