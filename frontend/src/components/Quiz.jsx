@@ -23,15 +23,23 @@ function Quiz({ category, onGameComplete }) {
   const [currentAchievement, setCurrentAchievement] = useState(null);
 
   useEffect(() => {
-    startGameSession();
-    // Check if user is logged in
-    const token = localStorage.getItem('token');
-    if (!token) {
-      setError('Please log in to play');
-      return;
+    // Reset game state when category changes
+    setUsedLocationIds([]);
+    setRoundNumber(1);
+    setTotalScore(0);
+    startNewGame();
+  }, [category]);
+
+  const startNewGame = async () => {
+    try {
+      // Start new game session
+      await startGameSession();
+      // Fetch first location
+      await fetchLocation();
+    } catch (error) {
+      setError('Failed to start new game');
     }
-    fetchLocation();
-  }, []);
+  };
 
   const startGameSession = async () => {
     try {
@@ -44,6 +52,8 @@ function Quiz({ category, onGameComplete }) {
       });
       const data = await response.json();
       setGameSessionId(data.id);
+      // Reset used locations when starting new session
+      setUsedLocationIds([]);
     } catch (error) {
       setError('Failed to start game session');
     }
@@ -77,6 +87,7 @@ function Quiz({ category, onGameComplete }) {
         ? 'http://localhost:8000/locations/random'
         : `http://localhost:8000/locations/category/${category}`;
       
+      // Only include exclude parameter if we have used locations in current session
       const excludeParam = usedLocationIds.length > 0 
         ? `?exclude=${usedLocationIds.join(',')}`
         : '';

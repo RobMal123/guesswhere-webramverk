@@ -5,6 +5,7 @@ function Friends() {
   const [searchUsername, setSearchUsername] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [error, setError] = useState(null);
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     fetchFriends();
@@ -25,6 +26,41 @@ function Friends() {
     }
   };
 
+  const searchUsers = async () => {
+    if (!searchUsername.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    try {
+      setIsSearching(true);
+      setError(null);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8000/users/search?username=${encodeURIComponent(searchUsername)}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to search users');
+      }
+      
+      const data = await response.json();
+      setSearchResults(data);
+    } catch (error) {
+      setError('Failed to search users');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      searchUsers();
+    }
+  };
+
   const addFriend = async (friendId) => {
     try {
       const token = localStorage.getItem('token');
@@ -35,9 +71,11 @@ function Friends() {
         }
       });
       if (response.ok) {
-        fetchFriends();
-        setSearchResults([]);
-        setSearchUsername('');
+        await fetchFriends();
+        setSearchResults(searchResults.filter(user => user.id !== friendId));
+        if (searchResults.length <= 1) {
+          setSearchUsername('');
+        }
       }
     } catch (error) {
       setError('Failed to add friend');
@@ -54,7 +92,7 @@ function Friends() {
         }
       });
       if (response.ok) {
-        fetchFriends();
+        await fetchFriends();
       }
     } catch (error) {
       setError('Failed to remove friend');
@@ -71,17 +109,52 @@ function Friends() {
         </div>
       )}
       
-      <div className="mb-6">
+      <div className="mb-6 flex gap-2">
         <input
           type="text"
           placeholder="Search users..."
           value={searchUsername}
           onChange={(e) => setSearchUsername(e.target.value)}
-          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          onKeyPress={handleKeyPress}
+          className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
+        <button
+          onClick={searchUsers}
+          disabled={isSearching || !searchUsername.trim()}
+          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 
+                   transition-colors font-semibold disabled:bg-blue-400"
+        >
+          {isSearching ? 'Searching...' : 'Search'}
+        </button>
       </div>
 
+      {/* Search Results */}
+      {searchResults.length > 0 && (
+        <div className="mb-8">
+          <h3 className="text-lg font-semibold mb-3 text-gray-700">Search Results</h3>
+          <div className="space-y-3">
+            {searchResults.map(user => (
+              <div 
+                key={user.id}
+                className="flex justify-between items-center p-4 bg-white rounded-lg border border-gray-200"
+              >
+                <span className="text-gray-800">{user.username}</span>
+                <button
+                  onClick={() => addFriend(user.id)}
+                  className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 
+                           transition-colors"
+                >
+                  Add Friend
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Friends List */}
       <div className="space-y-3">
+        <h3 className="text-lg font-semibold mb-3 text-gray-700">Your Friends</h3>
         {friends.map(friend => (
           <div 
             key={friend.id} 

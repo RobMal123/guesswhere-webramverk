@@ -767,3 +767,34 @@ async def get_uncategorized_locations(
     )
 
     return locations
+
+
+@app.get("/users/search", response_model=List[schemas.User])
+async def search_users(
+    username: str,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    # Search for users whose usernames contain the search term (case-insensitive)
+    # Exclude the current user and users who are already friends
+    users = (
+        db.query(models.User)
+        .filter(
+            models.User.id != current_user.id,  # Exclude current user
+            func.lower(models.User.username).contains(
+                func.lower(username)
+            ),  # Case-insensitive search
+            ~models.User.id.in_(  # Exclude existing friends
+                db.query(models.Friends.friend_id).filter(
+                    models.Friends.user_id == current_user.id
+                )
+            ),
+        )
+        .limit(10)  # Limit results for performance
+        .all()
+    )
+
+    return users
