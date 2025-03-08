@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 
 function Profile() {
+  const { userId } = useParams(); // Get userId from URL if viewing another user's profile
   const [userStats, setUserStats] = useState(null);
   const [achievements, setAchievements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [profileUser, setProfileUser] = useState(null);
 
   const achievementTiers = {
     bronze: {
@@ -31,17 +34,20 @@ function Profile() {
 
   useEffect(() => {
     fetchUserData();
-  }, []);
+  }, [userId]); // Re-fetch when userId changes
 
   const fetchUserData = async () => {
     try {
       const token = localStorage.getItem('token');
       const headers = { 'Authorization': `Bearer ${token}` };
 
-      // Fetch user achievements
-      const achievementsResponse = await fetch('http://localhost:8000/users/achievements/', {
-        headers
-      });
+      // If userId is provided, fetch that user's profile, otherwise fetch current user's profile
+      const achievementsResponse = await fetch(
+        userId 
+          ? `http://localhost:8000/users/${userId}/achievements/`
+          : 'http://localhost:8000/users/achievements/',
+        { headers }
+      );
       const achievementsData = await achievementsResponse.json();
 
       // Group achievements by tier
@@ -53,6 +59,14 @@ function Profile() {
       }, {});
 
       setAchievements(groupedAchievements);
+
+      // If viewing another user's profile, fetch their basic info
+      if (userId) {
+        const userResponse = await fetch(`http://localhost:8000/users/${userId}`, { headers });
+        const userData = await userResponse.json();
+        setProfileUser(userData);
+      }
+
       setLoading(false);
     } catch (error) {
       setError('Failed to load profile data');
@@ -78,7 +92,9 @@ function Profile() {
   return (
     <div className="max-w-6xl mx-auto p-8 bg-white rounded-lg shadow-lg">
       <div className="border-b-2 border-gray-100 pb-6 mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">Your Profile</h1>
+        <h1 className="text-3xl font-bold text-gray-800">
+          {profileUser ? `${profileUser.username}'s Profile` : 'Your Profile'}
+        </h1>
       </div>
 
       <div className="space-y-8">

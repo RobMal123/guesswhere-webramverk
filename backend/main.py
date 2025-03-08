@@ -798,3 +798,41 @@ async def search_users(
     )
 
     return users
+
+
+@app.get("/users/{user_id}", response_model=schemas.User)
+async def get_user(
+    user_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return user
+
+
+@app.get("/users/{user_id}/achievements/", response_model=List[schemas.UserAchievement])
+async def get_user_achievements_by_id(
+    user_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    achievements = (
+        db.query(models.UserAchievement)
+        .filter(models.UserAchievement.user_id == user_id)
+        .all()
+    )
+
+    return achievements

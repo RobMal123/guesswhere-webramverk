@@ -134,6 +134,9 @@ function AppContent() {
           <Route path="/profile" element={
             isLoggedIn ? <Profile /> : <Navigate to="/login" />
           } />
+          <Route path="/profile/:userId" element={
+            isLoggedIn ? <Profile /> : <Navigate to="/login" />
+          } />
         </Routes>
       </div>
     </div>
