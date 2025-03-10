@@ -40,9 +40,13 @@ function CategorySelection({ onCategorySelect }) {
         }
         const data = await response.json();
         
-        // Add the random option to the categories
+        // Filter out the "challenge" category and add the random option
+        const filteredCategories = data.filter(category => 
+          category.name.toLowerCase() !== 'challenge'
+        );
+        
         const categoriesWithRandom = [
-          ...data,
+          ...filteredCategories,
           { 
             id: 'random', 
             name: 'Random', 

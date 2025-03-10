@@ -15,6 +15,9 @@ CREATE TABLE categories (
     name VARCHAR(50) UNIQUE NOT NULL
 );
 
+-- Before the locations table creation, add:
+CREATE TYPE difficultylevel AS ENUM ('easy', 'medium', 'hard');
+
 -- Locations table with additional metadata
 CREATE TABLE locations (
     id SERIAL PRIMARY KEY,
@@ -24,18 +27,19 @@ CREATE TABLE locations (
     name VARCHAR(100),
     description TEXT,
     category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
-    difficulty_level VARCHAR(20) CHECK (difficulty_level IN ('easy', 'medium', 'hard')),
+    difficulty_level difficultylevel NOT NULL DEFAULT 'medium',
     country VARCHAR(100),
     region VARCHAR(100),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Scores table (No major changes)
+-- Scores table with game_session_id column
 CREATE TABLE scores (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     location_id INTEGER REFERENCES locations(id) ON DELETE CASCADE,
+    game_session_id INTEGER REFERENCES game_sessions(id) ON DELETE SET NULL,
     score INTEGER NOT NULL CHECK (score >= 0),
     guess_latitude FLOAT NOT NULL CHECK (guess_latitude BETWEEN -90 AND 90),
     guess_longitude FLOAT NOT NULL CHECK (guess_longitude BETWEEN -180 AND 180),
@@ -86,13 +90,14 @@ CREATE TABLE user_achievements (
 -- Indexes for performance optimization
 CREATE INDEX idx_scores_user_id ON scores(user_id);
 CREATE INDEX idx_scores_location_id ON scores(location_id);
+CREATE INDEX idx_scores_game_session_id ON scores(game_session_id);
 CREATE INDEX idx_locations_coords ON locations(latitude, longitude);
 CREATE INDEX idx_leaderboard_user_id ON leaderboard(user_id);
 CREATE INDEX idx_achievements_category ON achievements(category_id);
 CREATE INDEX idx_achievements_country ON achievements(country);
 CREATE INDEX idx_user_achievements_user ON user_achievements(user_id);
 
--- Trigger function to update updated_at column
+-- Make sure this function is defined before any triggers that use it
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -243,5 +248,139 @@ CREATE TRIGGER update_locations_updated_at
 
 CREATE TRIGGER update_leaderboard_updated_at
     BEFORE UPDATE ON leaderboard
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Challenge system tables
+
+-- Challenges table to track challenges between users
+CREATE TABLE challenges (
+    id SERIAL PRIMARY KEY,
+    challenger_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    challenged_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    status VARCHAR(20) CHECK (status IN ('pending', 'accepted', 'in_progress', 'completed')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    winner_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    current_round INTEGER DEFAULT 1
+);
+
+-- Challenge locations table to store the 5 locations for each challenge
+CREATE TABLE challenge_locations (
+    id SERIAL PRIMARY KEY,
+    challenge_id INTEGER REFERENCES challenges(id) ON DELETE CASCADE,
+    location_id INTEGER REFERENCES locations(id) ON DELETE CASCADE,
+    order_index INTEGER NOT NULL,
+    UNIQUE(challenge_id, order_index)
+);
+
+-- Challenge scores table to track scores for each location in a challenge
+CREATE TABLE challenge_scores (
+    id SERIAL PRIMARY KEY,
+    challenge_id INTEGER REFERENCES challenges(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    location_id INTEGER REFERENCES locations(id) ON DELETE CASCADE,
+    score INTEGER NOT NULL CHECK (score >= 0),
+    time_taken INTEGER NOT NULL, -- In seconds
+    distance FLOAT NOT NULL, -- Distance in km
+    guess_latitude FLOAT NOT NULL CHECK (guess_latitude BETWEEN -90 AND 90),
+    guess_longitude FLOAT NOT NULL CHECK (guess_longitude BETWEEN -180 AND 180),
+    round_number INTEGER NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(challenge_id, user_id, location_id)
+);
+
+-- Create indexes for performance
+CREATE INDEX idx_challenges_challenger ON challenges(challenger_id);
+CREATE INDEX idx_challenges_challenged ON challenges(challenged_id);
+CREATE INDEX idx_challenge_locations_challenge ON challenge_locations(challenge_id);
+CREATE INDEX idx_challenge_scores_challenge ON challenge_scores(challenge_id);
+CREATE INDEX idx_challenge_scores_user ON challenge_scores(user_id);
+
+-- Add challenge-related achievements
+INSERT INTO achievements (name, description, points_required) VALUES
+('Challenge Novice', 'Complete your first challenge', 0),
+('Challenge Master', 'Win 5 challenges', 0),
+('Challenge Champion', 'Win 10 challenges', 0),
+('Perfect Challenger', 'Score 5000 points in a single challenge', 0);
+
+-- Create a function to check and award challenge achievements
+CREATE OR REPLACE FUNCTION check_challenge_achievements(player_id INTEGER) RETURNS void AS $$
+BEGIN
+    -- Challenge Novice (First challenge completed)
+    IF (
+        SELECT COUNT(DISTINCT challenge_id) 
+        FROM challenge_scores cs
+        WHERE cs.user_id = player_id
+    ) = 1 THEN
+        INSERT INTO user_achievements (user_id, achievement_id)
+        SELECT player_id, id FROM achievements 
+        WHERE name = 'Challenge Novice'
+        ON CONFLICT DO NOTHING;
+    END IF;
+
+    -- Challenge Master (Win 5 challenges)
+    IF (
+        SELECT COUNT(*) 
+        FROM challenges c
+        WHERE c.winner_id = player_id
+    ) = 5 THEN
+        INSERT INTO user_achievements (user_id, achievement_id)
+        SELECT player_id, id FROM achievements 
+        WHERE name = 'Challenge Master'
+        ON CONFLICT DO NOTHING;
+    END IF;
+
+    -- Challenge Champion (Win 10 challenges)
+    IF (
+        SELECT COUNT(*) 
+        FROM challenges c
+        WHERE c.winner_id = player_id
+    ) = 10 THEN
+        INSERT INTO user_achievements (user_id, achievement_id)
+        SELECT player_id, id FROM achievements 
+        WHERE name = 'Challenge Champion'
+        ON CONFLICT DO NOTHING;
+    END IF;
+
+    -- Perfect Challenger (Score 5000 points in a single challenge)
+    IF EXISTS (
+        SELECT 1
+        FROM (
+            SELECT SUM(cs.score) as total_score
+            FROM challenge_scores cs
+            WHERE cs.user_id = player_id
+            GROUP BY cs.challenge_id
+        ) scores
+        WHERE total_score >= 5000
+    ) THEN
+        INSERT INTO user_achievements (user_id, achievement_id)
+        SELECT player_id, id FROM achievements 
+        WHERE name = 'Perfect Challenger'
+        ON CONFLICT DO NOTHING;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create a trigger to check challenge achievements when a challenge is completed
+CREATE OR REPLACE FUNCTION check_challenge_completion() RETURNS TRIGGER AS $$
+BEGIN
+    -- Check achievements for both players
+    PERFORM check_challenge_achievements(NEW.challenger_id);
+    PERFORM check_challenge_achievements(NEW.challenged_id);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER challenge_completion_trigger
+    AFTER UPDATE OF status ON challenges
+    FOR EACH ROW
+    WHEN (NEW.status = 'completed')
+    EXECUTE FUNCTION check_challenge_completion();
+
+-- Add triggers for updating timestamps
+CREATE TRIGGER update_challenges_updated_at
+    BEFORE UPDATE ON challenges
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();

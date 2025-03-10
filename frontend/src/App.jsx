@@ -9,6 +9,9 @@ import Navbar from './components/Navbar';
 import Friends from './components/Friends';
 import Profile from './components/Profile';
 import LandingPage from './components/LandingPage';
+import Challenges from './components/Challenges';
+import ChallengeQuiz from './components/ChallengeQuiz';
+import ChallengeResults from './components/ChallengeResults';
 
 function AppContent() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -137,6 +140,9 @@ function AppContent() {
           <Route path="/profile/:userId" element={
             isLoggedIn ? <Profile /> : <Navigate to="/login" />
           } />
+          <Route path="/challenges" element={<Challenges />} />
+          <Route path="/challenge-quiz/:challengeId" element={<ChallengeQuiz />} />
+          <Route path="/challenge-results/:challengeId" element={<ChallengeResults />} />
         </Routes>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 function Navbar({ isLoggedIn, isAdmin, onLogout }) {
   const navigate = useNavigate();
@@ -85,6 +85,14 @@ function Navbar({ isLoggedIn, isAdmin, onLogout }) {
         >
           {isLoggedIn ? 'Logout' : 'Login'}
         </button>
+        <Link 
+          to="/challenges" 
+          className="px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg 
+                   shadow-md hover:from-purple-600 hover:to-purple-700 transform hover:scale-105 
+                   transition-all duration-200"
+        >
+          Challenges
+        </Link>
       </div>
     </nav>
   );

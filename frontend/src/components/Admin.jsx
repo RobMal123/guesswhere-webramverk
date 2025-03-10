@@ -144,7 +144,7 @@ function Admin() {
       formData.append('category_id', newLocation.category_id);
       formData.append('name', newLocation.name);
       formData.append('description', newLocation.description);
-      formData.append('difficulty_level', newLocation.difficulty_level);
+      formData.append('difficulty_level', newLocation.difficulty_level.toLowerCase());
       formData.append('country', newLocation.country);
       formData.append('region', newLocation.region);
       formData.append('image', newLocation.image);
@@ -155,6 +155,7 @@ function Admin() {
         latitude: newLocation.latitude,
         longitude: newLocation.longitude,
         category: newLocation.category_id,
+        difficulty_level: newLocation.difficulty_level.toLowerCase(),
         image: newLocation.image?.name
       });
 
@@ -689,7 +690,15 @@ function Admin() {
             {locations.map(location => (
               <div key={location.id} className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <img src={`http://localhost:8000/${location.image_url}`} alt="Location" className="w-16 h-16 rounded-md" />
+                  <img 
+                    src={`http://localhost:8000/images/${location.image_url}`} 
+                    alt="Location" 
+                    className="w-16 h-16 rounded-md object-cover"
+                    onError={(e) => {
+                      console.error('Image failed to load:', e.target.src);
+                      e.target.src = 'https://via.placeholder.com/64'; // Fallback image
+                    }}
+                  />
                   <div>
                     <p className="text-gray-600 text-sm">{location.name}</p>
                     <p className="text-gray-500 text-sm">Lat: {location.latitude}</p>

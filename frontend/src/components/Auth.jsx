@@ -29,7 +29,7 @@ function Auth({ onLogin, isRegister = false }) {
         formBody.append('username', formData.username);
         formBody.append('password', formData.password);
 
-        const response = await fetch('http://localhost:8000/login', {
+        const response = await fetch('http://localhost:8000/api/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -43,7 +43,9 @@ function Auth({ onLogin, isRegister = false }) {
           throw new Error(data.detail || 'Login failed');
         }
 
+        // Store both token and user ID
         localStorage.setItem('token', data.access_token);
+        localStorage.setItem('userId', data.user_id.toString());
         onLogin({ token: data.access_token });
       } else {
         // Registration request
@@ -70,7 +72,7 @@ function Auth({ onLogin, isRegister = false }) {
         loginFormBody.append('username', formData.username);
         loginFormBody.append('password', formData.password);
 
-        const loginResponse = await fetch('http://localhost:8000/login', {
+        const loginResponse = await fetch('http://localhost:8000/api/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -82,6 +84,7 @@ function Auth({ onLogin, isRegister = false }) {
 
         if (loginResponse.ok) {
           localStorage.setItem('token', loginData.access_token);
+          localStorage.setItem('userId', loginData.user_id.toString());
           onLogin({ token: loginData.access_token });
         }
       }

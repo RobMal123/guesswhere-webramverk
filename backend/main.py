@@ -1,9 +1,9 @@
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
-from sqlalchemy import func, desc, and_, text
+from sqlalchemy import func, desc, and_, text, or_
 import models
 import schemas
 import database
@@ -22,6 +22,7 @@ import logging
 from pathlib import Path
 import re
 from urllib.parse import unquote
+from fastapi.responses import JSONResponse
 
 
 load_dotenv()
@@ -33,13 +34,11 @@ app = FastAPI()
 # Update the CORS middleware configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:3000",
-    ],  # Add any other frontend URLs you're using
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Security configurations
@@ -116,9 +115,18 @@ async def create_location(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
             )
 
+        # Convert difficulty_level to lowercase and validate
+        difficulty_level = difficulty_level.lower()
+
         # Validate difficulty level
-        if difficulty_level not in ["easy", "medium", "hard"]:
-            raise HTTPException(status_code=400, detail="Invalid difficulty level")
+        if difficulty_level not in [e.value for e in models.DifficultyLevel]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid difficulty level. Must be one of: {', '.join([e.value for e in models.DifficultyLevel])}",
+            )
+
+        # Convert string to enum
+        difficulty_enum = models.DifficultyLevel(difficulty_level)
 
         # Verify category exists
         category = (
@@ -135,7 +143,7 @@ async def create_location(
         with open(file_path, "wb") as buffer:
             buffer.write(await image.read())
 
-        # Create location with the correct image path
+        # Create location with the correct image path and enum value
         db_location = models.Location(
             image_url=file_name,  # Store just the filename
             latitude=float(latitude),
@@ -143,7 +151,7 @@ async def create_location(
             name=name,
             description=description,
             category_id=category_id,
-            difficulty_level=difficulty_level,
+            difficulty_level=difficulty_enum,  # Use the enum value
             country=country,
             region=region,
         )
@@ -836,3 +844,638 @@ async def get_user_achievements_by_id(
     )
 
     return achievements
+
+
+# Create a new challenge
+@app.post("/challenges/", response_model=schemas.Challenge)
+async def create_challenge(
+    friend_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    # Check if friend exists and is actually a friend
+    friendship = (
+        db.query(models.Friends)
+        .filter(
+            models.Friends.user_id == current_user.id,
+            models.Friends.friend_id == friend_id,
+        )
+        .first()
+    )
+
+    if not friendship:
+        raise HTTPException(status_code=404, detail="Friend not found")
+
+    # Create a new challenge
+    challenge = models.Challenge(challenger_id=current_user.id, challenged_id=friend_id)
+    db.add(challenge)
+    db.commit()
+    db.refresh(challenge)
+
+    # Select 5 random locations
+    locations = db.query(models.Location).order_by(func.random()).limit(5).all()
+
+    # Add these locations to the challenge
+    for i, location in enumerate(locations):
+        challenge_location = models.ChallengeLocation(
+            challenge_id=challenge.id,
+            location_id=location.id,
+            order_index=i + 1,  # 1-indexed
+        )
+        db.add(challenge_location)
+
+    db.commit()
+
+    return challenge
+
+
+# Get challenges for current user
+@app.get("/challenges/", response_model=List[schemas.ChallengeWithDetails])
+async def get_challenges(
+    status: Optional[str] = None,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    query = db.query(models.Challenge).filter(
+        or_(
+            models.Challenge.challenger_id == current_user.id,
+            models.Challenge.challenged_id == current_user.id,
+        )
+    )
+
+    if status:
+        query = query.filter(models.Challenge.status == status)
+
+    challenges = query.order_by(models.Challenge.created_at.desc()).all()
+    return challenges
+
+
+# Accept or decline a challenge
+@app.put("/challenges/{challenge_id}/respond", response_model=schemas.Challenge)
+async def respond_to_challenge(
+    challenge_id: int,
+    accept: bool,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    # Log for debugging
+    print(f"Responding to challenge {challenge_id}, accept={accept}")
+    print(f"Current user: {current_user.id} ({current_user.username})")
+
+    # First, check if the challenge exists at all
+    challenge = (
+        db.query(models.Challenge).filter(models.Challenge.id == challenge_id).first()
+    )
+
+    if not challenge:
+        raise HTTPException(status_code=404, detail="Challenge not found")
+
+    print(
+        f"Challenge found: challenger_id={challenge.challenger_id}, challenged_id={challenge.challenged_id}, status={challenge.status}"
+    )
+
+    # Now check if this user is the one being challenged and if the challenge is pending
+    if challenge.challenged_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You are not the challenged user")
+
+    if challenge.status != "pending":
+        raise HTTPException(status_code=400, detail="Challenge is not pending")
+
+    # Update the challenge status
+    if accept:
+        challenge.status = "accepted"
+    else:
+        challenge.status = "declined"
+
+    db.commit()
+    db.refresh(challenge)
+    return challenge
+
+
+# Get challenge details with locations
+@app.get("/challenges/{challenge_id}", response_model=schemas.ChallengeDetail)
+async def get_challenge_detail(
+    challenge_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    # Get the challenge with challenger and challenged users
+    challenge = (
+        db.query(models.Challenge)
+        .options(joinedload(models.Challenge.challenger))
+        .options(joinedload(models.Challenge.challenged))
+        .filter(
+            models.Challenge.id == challenge_id,
+            or_(
+                models.Challenge.challenger_id == current_user.id,
+                models.Challenge.challenged_id == current_user.id,
+            ),
+        )
+        .first()
+    )
+
+    if not challenge:
+        raise HTTPException(status_code=404, detail="Challenge not found")
+
+    # Get the challenge locations with their associated location details
+    challenge_locations = (
+        db.query(models.ChallengeLocation, models.Location)
+        .join(
+            models.Location, models.ChallengeLocation.location_id == models.Location.id
+        )
+        .filter(models.ChallengeLocation.challenge_id == challenge_id)
+        .order_by(models.ChallengeLocation.order_index)
+        .all()
+    )
+
+    # Get all guesses made by the current user for this challenge
+    user_guesses = (
+        db.query(models.ChallengeScore)
+        .filter(
+            models.ChallengeScore.challenge_id == challenge_id,
+            models.ChallengeScore.user_id == current_user.id,
+        )
+        .order_by(models.ChallengeScore.round_number.desc())
+        .all()
+    )
+
+    # Calculate the next round based on the last guess made
+    if user_guesses:
+        next_round = user_guesses[0].round_number + 1
+    else:
+        next_round = 1
+
+    # Update the challenge's current round
+    if not challenge.current_round or challenge.current_round != next_round:
+        challenge.current_round = next_round
+        db.commit()
+
+    # Create the response data structure
+    response_data = {
+        "id": challenge.id,
+        "challenger_id": challenge.challenger_id,
+        "challenged_id": challenge.challenged_id,
+        "status": challenge.status,
+        "created_at": challenge.created_at,
+        "completed_at": challenge.completed_at,
+        "winner_id": challenge.winner_id,
+        "current_round": challenge.current_round,
+        "challenger": {
+            "id": challenge.challenger.id,
+            "username": challenge.challenger.username,
+            "email": challenge.challenger.email,
+            "is_admin": challenge.challenger.is_admin,
+            "created_at": challenge.challenger.created_at,
+        },
+        "challenged": {
+            "id": challenge.challenged.id,
+            "username": challenge.challenged.username,
+            "email": challenge.challenged.email,
+            "is_admin": challenge.challenged.is_admin,
+            "created_at": challenge.challenged.created_at,
+        },
+        "locations": [
+            {
+                "id": cl.id,
+                "challenge_id": cl.challenge_id,
+                "location_id": cl.location_id,
+                "order_index": cl.order_index,
+                "location": {
+                    "id": loc.id,
+                    "name": loc.name,
+                    "latitude": loc.latitude,
+                    "longitude": loc.longitude,
+                    "image_url": loc.image_url,
+                    "category_id": loc.category_id,
+                    "difficulty_level": loc.difficulty_level,
+                    "country": loc.country,
+                    "region": loc.region,
+                    "description": loc.description,
+                    "created_at": loc.created_at,
+                    "updated_at": loc.updated_at,
+                },
+            }
+            for cl, loc in challenge_locations
+        ],
+    }
+
+    return response_data
+
+
+# Start a challenge (set to in_progress)
+@app.put("/challenges/{challenge_id}/start", response_model=schemas.Challenge)
+async def start_challenge(
+    challenge_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    challenge = (
+        db.query(models.Challenge)
+        .filter(
+            models.Challenge.id == challenge_id,
+            models.Challenge.status == "accepted",
+            or_(
+                models.Challenge.challenger_id == current_user.id,
+                models.Challenge.challenged_id == current_user.id,
+            ),
+        )
+        .first()
+    )
+
+    if not challenge:
+        raise HTTPException(
+            status_code=404, detail="Challenge not found or not accepted"
+        )
+
+    # Check if user has any existing guesses
+    existing_guesses = (
+        db.query(models.ChallengeScore)
+        .filter(
+            models.ChallengeScore.challenge_id == challenge_id,
+            models.ChallengeScore.user_id == current_user.id,
+        )
+        .order_by(models.ChallengeScore.round_number.desc())
+        .first()
+    )
+
+    challenge.status = "in_progress"
+    challenge.current_round = (
+        (existing_guesses.round_number + 1) if existing_guesses else 1
+    )
+
+    db.commit()
+    db.refresh(challenge)
+    return challenge
+
+
+# Submit a guess for a challenge
+@app.post(
+    "/challenges/{challenge_id}/submit-guess", response_model=schemas.ChallengeScore
+)
+async def submit_challenge_guess(
+    challenge_id: int,
+    guess: schemas.ChallengeGuessCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    try:
+        # Verify the challenge and ensure it's in progress
+        challenge = (
+            db.query(models.Challenge)
+            .filter(
+                models.Challenge.id == challenge_id,
+                models.Challenge.status == "in_progress",
+                or_(
+                    models.Challenge.challenger_id == current_user.id,
+                    models.Challenge.challenged_id == current_user.id,
+                ),
+            )
+            .first()
+        )
+
+        if not challenge:
+            raise HTTPException(
+                status_code=404, detail="Challenge not found or not in progress"
+            )
+
+        # Verify the round number matches the challenge's current round
+        if guess.round_number != challenge.current_round:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid round number. Expected {challenge.current_round}, got {guess.round_number}",
+            )
+
+        # Verify the location belongs to this challenge
+        challenge_location = (
+            db.query(models.ChallengeLocation)
+            .filter(
+                models.ChallengeLocation.challenge_id == challenge_id,
+                models.ChallengeLocation.location_id == guess.location_id,
+            )
+            .first()
+        )
+
+        if not challenge_location:
+            raise HTTPException(
+                status_code=400, detail="Location is not part of this challenge"
+            )
+
+        # Check if this location has already been guessed by the user
+        existing_guess = (
+            db.query(models.ChallengeScore)
+            .filter(
+                models.ChallengeScore.challenge_id == challenge_id,
+                models.ChallengeScore.user_id == current_user.id,
+                models.ChallengeScore.location_id == guess.location_id,
+            )
+            .first()
+        )
+
+        if existing_guess:
+            raise HTTPException(
+                status_code=400,
+                detail="You have already submitted a guess for this location",
+            )
+
+        # Calculate distance and score
+        distance = calculate_distance(
+            guess.guessed_latitude,
+            guess.guessed_longitude,
+            guess.actual_latitude,
+            guess.actual_longitude,
+        )
+
+        # Base score uses existing calculation
+        base_score = calculate_score(distance)
+
+        # Time bonus (maximum 20% bonus for immediate answers)
+        max_time_bonus = base_score * 0.2
+        time_factor = max(0, 1 - (guess.time_taken / 60))
+        time_bonus = int(max_time_bonus * time_factor)
+
+        total_score = base_score + time_bonus
+
+        # Create new guess
+        challenge_score = models.ChallengeScore(
+            challenge_id=challenge_id,
+            user_id=current_user.id,
+            location_id=guess.location_id,
+            score=total_score,
+            time_taken=guess.time_taken,
+            distance=distance,
+            guess_latitude=guess.guessed_latitude,
+            guess_longitude=guess.guessed_longitude,
+            round_number=guess.round_number,
+        )
+
+        db.add(challenge_score)
+
+        # After saving the guess, check total guesses from both players
+        total_locations = (
+            db.query(models.ChallengeLocation)
+            .filter(models.ChallengeLocation.challenge_id == challenge_id)
+            .count()
+        )
+
+        # Count guesses for both players
+        total_guesses = (
+            db.query(models.ChallengeScore)
+            .filter(models.ChallengeScore.challenge_id == challenge_id)
+            .count()
+        )
+
+        # If we have all 10 guesses (5 from each player), mark as completed
+        if (
+            total_guesses == total_locations * 2
+        ):  # 5 locations * 2 players = 10 total guesses
+            # Calculate final scores
+            challenger_total = (
+                db.query(func.sum(models.ChallengeScore.score))
+                .filter(
+                    models.ChallengeScore.challenge_id == challenge_id,
+                    models.ChallengeScore.user_id == challenge.challenger_id,
+                )
+                .scalar()
+                or 0
+            )
+
+            challenged_total = (
+                db.query(func.sum(models.ChallengeScore.score))
+                .filter(
+                    models.ChallengeScore.challenge_id == challenge_id,
+                    models.ChallengeScore.user_id == challenge.challenged_id,
+                )
+                .scalar()
+                or 0
+            )
+
+            # Update challenge status
+            challenge.status = "completed"
+            challenge.completed_at = func.now()
+            challenge.winner_id = (
+                challenge.challenger_id
+                if challenger_total > challenged_total
+                else challenge.challenged_id
+                if challenged_total > challenger_total
+                else None  # Draw
+            )
+
+        # Set current round for the player who just submitted
+        if current_user.id == challenge.challenger_id:
+            challenger_guesses = (
+                db.query(models.ChallengeScore)
+                .filter(
+                    models.ChallengeScore.challenge_id == challenge_id,
+                    models.ChallengeScore.user_id == challenge.challenger_id,
+                )
+                .count()
+            )
+            if challenger_guesses == total_locations:
+                challenge.current_round = total_locations + 1
+        else:
+            challenged_guesses = (
+                db.query(models.ChallengeScore)
+                .filter(
+                    models.ChallengeScore.challenge_id == challenge_id,
+                    models.ChallengeScore.user_id == challenge.challenged_id,
+                )
+                .count()
+            )
+            if challenged_guesses == total_locations:
+                challenge.current_round = total_locations + 1
+
+        db.commit()
+        db.refresh(challenge_score)
+        return challenge_score
+
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Database error in submit_challenge_guess: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred while saving your guess: {str(e)}",
+        )
+    except Exception as e:
+        logger.error(f"Error in submit_challenge_guess: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Get challenge results
+@app.get("/challenges/{challenge_id}/results", response_model=schemas.ChallengeResults)
+async def get_challenge_results(
+    challenge_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    # Get challenge with challenger and challenged users
+    challenge = (
+        db.query(models.Challenge)
+        .options(joinedload(models.Challenge.challenger))
+        .options(joinedload(models.Challenge.challenged))
+        .filter(
+            models.Challenge.id == challenge_id,
+            or_(
+                models.Challenge.challenger_id == current_user.id,
+                models.Challenge.challenged_id == current_user.id,
+            ),
+        )
+        .first()
+    )
+
+    if not challenge:
+        raise HTTPException(status_code=404, detail="Challenge not found")
+
+    # Get scores with user information
+    scores = (
+        db.query(models.ChallengeScore)
+        .options(joinedload(models.ChallengeScore.user))
+        .filter(models.ChallengeScore.challenge_id == challenge_id)
+        .all()
+    )
+
+    # Check if we have all 10 guesses and challenge is still in progress
+    if len(scores) == 10 and challenge.status == "in_progress":
+        # Calculate final scores
+        challenger_total = sum(
+            score.score for score in scores if score.user_id == challenge.challenger_id
+        )
+
+        challenged_total = sum(
+            score.score for score in scores if score.user_id == challenge.challenged_id
+        )
+
+        # Update challenge status
+        challenge.status = "completed"
+        challenge.completed_at = func.now()
+        challenge.winner_id = (
+            challenge.challenger_id
+            if challenger_total > challenged_total
+            else challenge.challenged_id
+            if challenged_total > challenger_total
+            else None  # Draw
+        )
+        db.commit()
+        db.refresh(challenge)
+
+    return {
+        "challenge": challenge,
+        "scores": scores,
+        "is_complete": challenge.status == "completed",
+    }
+
+
+# Add this error handler
+@app.exception_handler(Exception)
+async def validation_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc)},
+        headers={
+            "Access-Control-Allow-Origin": "http://localhost:5173",
+            "Access-Control-Allow-Credentials": "true",
+        },
+    )
+
+
+@app.put("/challenges/{challenge_id}/complete", response_model=schemas.Challenge)
+async def complete_challenge(
+    challenge_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    try:
+        # Get the challenge
+        challenge = (
+            db.query(models.Challenge)
+            .filter(
+                models.Challenge.id == challenge_id,
+                models.Challenge.status == "in_progress",
+                or_(
+                    models.Challenge.challenger_id == current_user.id,
+                    models.Challenge.challenged_id == current_user.id,
+                ),
+            )
+            .first()
+        )
+
+        if not challenge:
+            raise HTTPException(
+                status_code=404, detail="Challenge not found or not in progress"
+            )
+
+        # Calculate final scores
+        challenger_total = (
+            db.query(func.sum(models.ChallengeScore.score))
+            .filter(
+                models.ChallengeScore.challenge_id == challenge_id,
+                models.ChallengeScore.user_id == challenge.challenger_id,
+            )
+            .scalar()
+            or 0
+        )
+
+        challenged_total = (
+            db.query(func.sum(models.ChallengeScore.score))
+            .filter(
+                models.ChallengeScore.challenge_id == challenge_id,
+                models.ChallengeScore.user_id == challenge.challenged_id,
+            )
+            .scalar()
+            or 0
+        )
+
+        # First update basic fields without triggers
+        result = (
+            db.query(models.Challenge)
+            .filter(models.Challenge.id == challenge_id)
+            .update(
+                {
+                    "status": "completed",
+                    "completed_at": func.now(),
+                    "winner_id": (
+                        challenge.challenger_id
+                        if challenger_total > challenged_total
+                        else challenge.challenged_id
+                        if challenged_total > challenger_total
+                        else None
+                    ),
+                },
+                synchronize_session=False,
+            )
+        )
+
+        db.commit()
+        db.refresh(challenge)
+        return challenge
+
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Database error in complete_challenge: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="An error occurred while completing the challenge",
+        )

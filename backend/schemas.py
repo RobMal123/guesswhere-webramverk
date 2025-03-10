@@ -227,3 +227,99 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: Optional[str] = None
+
+
+class ChallengeGuessCreate(BaseModel):
+    location_id: int
+    guessed_latitude: float
+    guessed_longitude: float
+    actual_latitude: float
+    actual_longitude: float
+    time_taken: int  # In seconds
+    round_number: int
+
+
+class ChallengeScoreBase(BaseModel):
+    challenge_id: int
+    user_id: int
+    location_id: int
+    score: int
+    time_taken: int
+    distance: float
+    round_number: int
+
+
+class ChallengeScore(ChallengeScoreBase):
+    id: int
+    guess_latitude: float
+    guess_longitude: float
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ChallengeBase(BaseModel):
+    challenger_id: int
+    challenged_id: int
+    status: str
+    current_round: Optional[int] = 1
+
+
+class Challenge(ChallengeBase):
+    id: int
+    created_at: datetime
+    completed_at: Optional[datetime] = None
+    winner_id: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ChallengeWithDetails(Challenge):
+    challenger: User
+    challenged: User
+    winner: Optional[User] = None
+
+
+class ChallengeLocationBase(BaseModel):
+    challenge_id: int
+    location_id: int
+    order: int
+
+
+class ChallengeLocation(BaseModel):
+    id: int
+    challenge_id: int
+    location_id: int
+    order_index: int
+    location: Optional[Location] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ChallengeDetail(BaseModel):
+    id: int
+    challenger_id: int
+    challenged_id: int
+    status: str
+    created_at: datetime
+    completed_at: Optional[datetime]
+    winner_id: Optional[int]
+    current_round: int
+    locations: List[ChallengeLocation]
+    challenger: Optional[User]
+    challenged: Optional[User]
+
+    class Config:
+        from_attributes = True
+
+
+class ChallengeResults(BaseModel):
+    challenge: Challenge
+    scores: List[ChallengeScore]
+    is_complete: bool
+
+    class Config:
+        from_attributes = True

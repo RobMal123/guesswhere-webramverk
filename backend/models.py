@@ -10,6 +10,7 @@ from sqlalchemy import (
     TIMESTAMP,
     func,
     Enum as SQLAlchemyEnum,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
 from database import Base
@@ -93,10 +94,10 @@ class Location(Base):
 class GameSession(Base):
     __tablename__ = "game_sessions"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
-    started_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
-    ended_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    started_at = Column(DateTime(timezone=True), server_default=func.now())
+    ended_at = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     user = relationship("User", back_populates="game_sessions")
@@ -183,3 +184,74 @@ class UserAchievement(Base):
     # Relationships
     user = relationship("User", back_populates="achievements")
     achievement = relationship("Achievement", back_populates="users")
+
+
+class Challenge(Base):
+    __tablename__ = "challenges"
+
+    id = Column(Integer, primary_key=True)
+    challenger_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    challenged_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    status = Column(
+        SQLAlchemyEnum(
+            "pending", "accepted", "in_progress", "completed", name="challenge_status"
+        ),
+        default="pending",
+    )
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    completed_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    winner_id = Column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    current_round = Column(Integer, default=1)
+
+    # Relationships
+    challenger = relationship(
+        "User", foreign_keys=[challenger_id], backref="sent_challenges"
+    )
+    challenged = relationship(
+        "User", foreign_keys=[challenged_id], backref="received_challenges"
+    )
+    winner = relationship("User", foreign_keys=[winner_id])
+    locations = relationship("ChallengeLocation", back_populates="challenge")
+    scores = relationship("ChallengeScore", back_populates="challenge")
+
+
+class ChallengeLocation(Base):
+    __tablename__ = "challenge_locations"
+
+    id = Column(Integer, primary_key=True)
+    challenge_id = Column(Integer, ForeignKey("challenges.id", ondelete="CASCADE"))
+    location_id = Column(Integer, ForeignKey("locations.id", ondelete="CASCADE"))
+    order_index = Column(Integer, nullable=False)  # Position 1-5 in the challenge
+
+    # Relationships
+    challenge = relationship("Challenge", back_populates="locations")
+    location = relationship("Location")
+
+    # Unique constraint to ensure no duplicate locations in a challenge
+    __table_args__ = (UniqueConstraint("challenge_id", "order_index"),)
+
+
+class ChallengeScore(Base):
+    __tablename__ = "challenge_scores"
+
+    id = Column(Integer, primary_key=True)
+    challenge_id = Column(Integer, ForeignKey("challenges.id", ondelete="CASCADE"))
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    location_id = Column(Integer, ForeignKey("locations.id", ondelete="CASCADE"))
+    score = Column(Integer, nullable=False)
+    time_taken = Column(Integer, nullable=False)  # In seconds
+    distance = Column(Float, nullable=False)  # Distance in km
+    guess_latitude = Column(Float, nullable=False)
+    guess_longitude = Column(Float, nullable=False)
+    round_number = Column(Integer, nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+
+    # Relationships
+    challenge = relationship("Challenge", back_populates="scores")
+    user = relationship("User")
+    location = relationship("Location")
+
+    # Unique constraint to ensure one score per user per location in a challenge
+    __table_args__ = (UniqueConstraint("challenge_id", "user_id", "location_id"),)
