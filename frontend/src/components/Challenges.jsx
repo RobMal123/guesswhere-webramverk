@@ -234,30 +234,30 @@ function Challenges() {
       {/* Tabs */}
       <div className="flex border-b border-gray-200 mb-6">
         <button
-          className={`py-2 px-4 font-medium ${
+          className={`py-2 px-4 font-medium rounded-t-lg transition-all duration-200 ${
             activeTab === 'pending' 
-              ? 'text-blue-600 border-b-2 border-blue-600' 
-              : 'text-gray-500 hover:text-gray-700'
+              ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md border-2 border-black' 
+              : 'text-white bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600'
           }`}
           onClick={() => setActiveTab('pending')}
         >
           Pending
         </button>
         <button
-          className={`py-2 px-4 font-medium ${
+          className={`py-2 px-4 font-medium rounded-t-lg transition-all duration-200 ${
             activeTab === 'active' 
-              ? 'text-blue-600 border-b-2 border-blue-600' 
-              : 'text-gray-500 hover:text-gray-700'
+              ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md border-2 border-black' 
+              : 'text-white bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600'
           }`}
           onClick={() => setActiveTab('active')}
         >
           Active
         </button>
         <button
-          className={`py-2 px-4 font-medium ${
+          className={`py-2 px-4 font-medium rounded-t-lg transition-all duration-200 ${
             activeTab === 'completed' 
-              ? 'text-blue-600 border-b-2 border-blue-600' 
-              : 'text-gray-500 hover:text-gray-700'
+              ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md border-2 border-black' 
+              : 'text-white bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600'
           }`}
           onClick={() => setActiveTab('completed')}
         >
