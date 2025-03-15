@@ -1,5 +1,16 @@
 import React, { useState, useEffect } from 'react';
 
+/**
+ * Admin Dashboard Component
+ * Provides a comprehensive interface for managing the application's content and monitoring statistics.
+ * 
+ * Features:
+ * - Dashboard statistics (users, locations, guesses, scores)
+ * - Category management
+ * - Achievement management with tier system
+ * - Location management (CRUD operations)
+ * - User overview
+ */
 function Admin() {
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -59,6 +70,12 @@ function Admin() {
       color: "#B9F2FF"
     }
   };
+
+  /**
+   * Determines the achievement tier based on points
+   * @param {number} points - The points to evaluate
+   * @returns {string} The tier name ('diamond', 'gold', 'silver', or 'bronze')
+   */
 
   const getTierForPoints = (points) => {
     if (points >= 4750) return 'diamond';
@@ -127,6 +144,12 @@ function Admin() {
       console.error('Error fetching achievements:', error);
     }
   };
+
+/**
+   * Handles the submission of a new location
+   * Validates and uploads location data including image
+   * @param {Event} e - The form submission event
+   */
 
   const handleLocationSubmit = async (e) => {
     e.preventDefault();

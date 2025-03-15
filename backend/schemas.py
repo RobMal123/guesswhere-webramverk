@@ -317,7 +317,7 @@ class ChallengeDetail(BaseModel):
 
 
 class ChallengeResults(BaseModel):
-    challenge: Challenge
+    challenge: ChallengeWithDetails
     scores: List[ChallengeScore]
     is_complete: bool
 

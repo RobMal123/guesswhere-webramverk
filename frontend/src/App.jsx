@@ -85,67 +85,100 @@ function AppContent() {
     navigate('/');
   };
 
+  const AppWrapper = ({ children }) => (
+    <div className="relative min-h-screen">
+      {/* World Map Background */}
+      <div 
+        className="fixed inset-0 w-full h-full"
+        style={{
+          backgroundImage: `url('/src/assets/world-map.png')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        }}
+      />
+
+      {/* Semi-transparent overlay for better readability */}
+      <div className="fixed inset-0 bg-black/30" />
+
+      {/* App Content */}
+      <div className="relative z-10">
+        {isLoggedIn && (
+          <Navbar 
+            isLoggedIn={isLoggedIn} 
+            isAdmin={isAdmin} 
+            onLogout={handleLogout}
+          />
+        )}
+        <div className="container mx-auto px-4">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+
   if (!isLoggedIn) {
     return (
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<Auth onLogin={handleLogin} />} />
-        <Route path="/register" element={<Auth onLogin={handleLogin} isRegister={true} />} />
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
+      <AppWrapper>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<Auth onLogin={handleLogin} />} />
+          <Route path="/register" element={<Auth onLogin={handleLogin} isRegister={true} />} />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </AppWrapper>
     );
   }
 
   return (
-    <div className="app">
-      <Navbar 
-        isLoggedIn={isLoggedIn} 
-        isAdmin={isAdmin} 
-        onLogout={handleLogout}
-      />
-      <div className="container mx-auto px-4">
-        <Routes>
-          <Route path="/admin" element={isAdmin ? <Admin /> : <Navigate to="/" />} />
-          <Route path="/game-complete" element={
-            <div className="game-complete p-6">
-              <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold mb-4">Game Complete!</h2>
-                <p className="text-xl mb-2">Total Score: {finalScore}</p>
-                <p className="text-lg mb-4">Average Score per Round: {Math.round(averageScore)}</p>
-                <button 
-                  onClick={startNewGame}
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
-                  Play Again
-                </button>
-              </div>
-              <div className="mt-8">
-                <Leaderboard />
+    <AppWrapper>
+      <Routes>
+        <Route path="/admin" element={isAdmin ? <Admin /> : <Navigate to="/" />} />
+        <Route path="/game-complete" element={
+          <div className="relative z-10 p-8 w-full max-w-7xl mx-auto">
+            <div className="backdrop-blur-sm bg-white/10 border border-white/20 rounded-2xl p-8 shadow-xl mb-8">
+              <div className="text-center">
+                <h2 className="text-3xl font-bold mb-6 text-white">Game Complete!</h2>
+                <div className="space-y-4">
+                  <p className="text-2xl text-white/90">Total Score: {finalScore}</p>
+                  <p className="text-xl text-white/80">Average Score per Round: {Math.round(averageScore)}</p>
+                  <button 
+                    onClick={startNewGame}
+                    className="px-8 py-4 rounded-xl font-medium transition-all duration-300
+                             bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20
+                             text-white hover:shadow-lg transform hover:scale-[1.02]"
+                  >
+                    Play Again
+                  </button>
+                </div>
               </div>
             </div>
-          } />
-          <Route path="/game" element={
-            <Quiz 
-              category={selectedCategory} 
-              onGameComplete={handleGameComplete}
-            />
-          } />
-          <Route path="/" element={
-            <CategorySelection onCategorySelect={handleCategorySelect} />
-          } />
-          <Route path="/friends" element={<Friends />} />
-          <Route path="/profile" element={
-            isLoggedIn ? <Profile /> : <Navigate to="/login" />
-          } />
-          <Route path="/profile/:userId" element={
-            isLoggedIn ? <Profile /> : <Navigate to="/login" />
-          } />
-          <Route path="/challenges" element={<Challenges />} />
-          <Route path="/challenge-quiz/:challengeId" element={<ChallengeQuiz />} />
-          <Route path="/challenge-results/:challengeId" element={<ChallengeResults />} />
-        </Routes>
-      </div>
-    </div>
+            <div className="mt-8">
+              <Leaderboard />
+            </div>
+          </div>
+        } />
+        <Route path="/game" element={
+          <Quiz 
+            category={selectedCategory} 
+            onGameComplete={handleGameComplete}
+          />
+        } />
+        <Route path="/" element={
+          <CategorySelection onCategorySelect={handleCategorySelect} />
+        } />
+        <Route path="/friends" element={<Friends />} />
+        <Route path="/profile" element={
+          isLoggedIn ? <Profile /> : <Navigate to="/login" />
+        } />
+        <Route path="/profile/:userId" element={
+          isLoggedIn ? <Profile /> : <Navigate to="/login" />
+        } />
+        <Route path="/challenges" element={<Challenges />} />
+        <Route path="/challenge-quiz/:challengeId" element={<ChallengeQuiz />} />
+        <Route path="/challenge-results/:challengeId" element={<ChallengeResults />} />
+      </Routes>
+    </AppWrapper>
   );
 }
 

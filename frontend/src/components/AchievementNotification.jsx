@@ -1,7 +1,29 @@
 import React from 'react';
 
+/**
+ * AchievementNotification Component
+ * Displays a toast-style notification when a user unlocks an achievement.
+ * Features animated entrance, tier-based styling, and a close button.
+ * 
+ * Props:
+ * @param {Object} achievement - The achievement data to display
+ *   @param {string} achievement.name - Name of the achievement
+ *   @param {string} achievement.description - Description of the achievement
+ *   @param {number} achievement.points_required - Points required for the achievement
+ * @param {Function} onClose - Callback function to handle notification dismissal
+ */
 function AchievementNotification({ achievement, onClose }) {
-  // Determine tier based on points required
+  /**
+   * Determines the visual styling based on achievement point requirements.
+   * Returns different color schemes for different achievement tiers:
+   * - Sky (Blue): 4750+ points - Highest tier
+   * - Yellow: 4000-4749 points - High tier
+   * - Gray: 3500-3999 points - Medium tier
+   * - Amber: <3500 points - Base tier
+   * 
+   * @param {number} points - The points required for the achievement
+   * @returns {Object} An object containing Tailwind CSS classes for different style elements
+   */
   const getTierStyles = (points) => {
     if (points >= 4750) {
       return {

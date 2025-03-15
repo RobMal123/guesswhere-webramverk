@@ -711,7 +711,7 @@ async def create_category(
 
 
 @app.get("/categories/", response_model=List[schemas.Category])
-async def list_categories(db: Session = Depends(get_db)):
+def list_categories(db: Session = Depends(get_db)):
     return db.query(models.Category).all()
 
 
@@ -1325,10 +1325,13 @@ async def get_challenge_results(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """
+    Retrieve the results of a specific challenge.
+    """
     if not current_user:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    # Get challenge with challenger and challenged users
+    # Get the challenge with challenger and challenged info
     challenge = (
         db.query(models.Challenge)
         .options(joinedload(models.Challenge.challenger))
@@ -1356,7 +1359,7 @@ async def get_challenge_results(
 
     # Check if we have all 10 guesses and challenge is still in progress
     if len(scores) == 10 and challenge.status == "in_progress":
-        # Calculate final scores
+        # Calculate final scores for both players
         challenger_total = sum(
             score.score for score in scores if score.user_id == challenge.challenger_id
         )
@@ -1365,7 +1368,7 @@ async def get_challenge_results(
             score.score for score in scores if score.user_id == challenge.challenged_id
         )
 
-        # Update challenge status
+        # Update challenge status and determine winner
         challenge.status = "completed"
         challenge.completed_at = func.now()
         challenge.winner_id = (
@@ -1378,11 +1381,9 @@ async def get_challenge_results(
         db.commit()
         db.refresh(challenge)
 
-    return {
-        "challenge": challenge,
-        "scores": scores,
-        "is_complete": challenge.status == "completed",
-    }
+    return schemas.ChallengeResults(
+        challenge=challenge, scores=scores, is_complete=challenge.status == "completed"
+    )
 
 
 # Add this error handler
@@ -1398,8 +1399,8 @@ async def validation_exception_handler(request, exc):
     )
 
 
-@app.put("/challenges/{challenge_id}/complete", response_model=schemas.Challenge)
-async def complete_challenge(
+@app.delete("/challenges/{challenge_id}")
+async def delete_challenge(
     challenge_id: int,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -1407,75 +1408,24 @@ async def complete_challenge(
     if not current_user:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    try:
-        # Get the challenge
-        challenge = (
-            db.query(models.Challenge)
-            .filter(
-                models.Challenge.id == challenge_id,
-                models.Challenge.status == "in_progress",
-                or_(
-                    models.Challenge.challenger_id == current_user.id,
-                    models.Challenge.challenged_id == current_user.id,
-                ),
-            )
-            .first()
+    challenge = (
+        db.query(models.Challenge)
+        .filter(
+            models.Challenge.id == challenge_id,
+            or_(
+                models.Challenge.challenger_id == current_user.id,
+                models.Challenge.challenged_id == current_user.id,
+            ),
         )
+        .first()
+    )
 
-        if not challenge:
-            raise HTTPException(
-                status_code=404, detail="Challenge not found or not in progress"
-            )
-
-        # Calculate final scores
-        challenger_total = (
-            db.query(func.sum(models.ChallengeScore.score))
-            .filter(
-                models.ChallengeScore.challenge_id == challenge_id,
-                models.ChallengeScore.user_id == challenge.challenger_id,
-            )
-            .scalar()
-            or 0
-        )
-
-        challenged_total = (
-            db.query(func.sum(models.ChallengeScore.score))
-            .filter(
-                models.ChallengeScore.challenge_id == challenge_id,
-                models.ChallengeScore.user_id == challenge.challenged_id,
-            )
-            .scalar()
-            or 0
-        )
-
-        # First update basic fields without triggers
-        result = (
-            db.query(models.Challenge)
-            .filter(models.Challenge.id == challenge_id)
-            .update(
-                {
-                    "status": "completed",
-                    "completed_at": func.now(),
-                    "winner_id": (
-                        challenge.challenger_id
-                        if challenger_total > challenged_total
-                        else challenge.challenged_id
-                        if challenged_total > challenger_total
-                        else None
-                    ),
-                },
-                synchronize_session=False,
-            )
-        )
-
-        db.commit()
-        db.refresh(challenge)
-        return challenge
-
-    except SQLAlchemyError as e:
-        db.rollback()
-        logger.error(f"Database error in complete_challenge: {str(e)}")
+    if not challenge:
         raise HTTPException(
-            status_code=500,
-            detail="An error occurred while completing the challenge",
+            status_code=404,
+            detail="Challenge not found or you don't have permission to delete it",
         )
+
+    db.delete(challenge)
+    db.commit()
+    return {"message": "Challenge deleted successfully"}

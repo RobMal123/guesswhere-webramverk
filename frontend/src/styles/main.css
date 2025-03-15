@@ -103,7 +103,8 @@ body {
 /* .form-group { ... } */
 /* .error-message { ... } */
 
-button {
+.auth-button,
+.primary-button {
   width: 100%;
   padding: 0.75rem;
   background: linear-gradient(135deg, #63B3ED, #2B6CB0) !important;
@@ -116,22 +117,11 @@ button {
   box-shadow: 0 4px 6px rgba(43, 108, 176, 0.1);
 }
 
-button:hover {
+.auth-button:hover,
+.primary-button:hover {
   background: linear-gradient(135deg, #4299E1, #2C5282) !important;
   transform: scale(1.02);
   box-shadow: 0 6px 8px rgba(43, 108, 176, 0.2);
-}
-
-.toggle-auth {
-  background: none;
-  color: #2B6CB0;
-  box-shadow: none;
-}
-
-.toggle-auth:hover {
-  background: none;
-  color: #2C5282;
-  box-shadow: none;
 }
 
 /* Leaderboard styles */

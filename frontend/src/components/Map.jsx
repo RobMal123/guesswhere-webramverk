@@ -11,6 +11,17 @@ L.Icon.Default.mergeOptions({
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
+
+/**
+ * Handler component for map click events.
+ * Manages the submission of user guesses to the backend.
+ * 
+ * Props:
+ * @param {Function} onGuessSubmit - Callback function when user submits a guess
+ * @param {Object} correctLocation - The actual location coordinates
+ * @param {number} locationId - ID of the current location
+ */
+
 function MapClickHandler({ onGuessSubmit, correctLocation, locationId }) {
   useMapEvents({
     click: async (e) => {
@@ -49,6 +60,23 @@ function MapClickHandler({ onGuessSubmit, correctLocation, locationId }) {
   return null;
 }
 
+/**
+ * Interactive map component for GuessWhere game.
+ * Uses Leaflet for map rendering and handling user interactions.
+ * 
+ * Features:
+ * - Allows users to click on the map to submit guesses
+ * - Shows markers for correct location (green) and guessed location (red) after submission
+ * - Handles guess submission to backend API
+ * 
+ * Props:
+ * @param {Function} onGuessSubmit - Callback function when user submits a guess
+ * @param {boolean} showResult - Whether to show the result markers
+ * @param {Object|Array} correctLocation - The actual location coordinates {lat, lng}
+ * @param {Object} guessedLocation - The user's guessed coordinates {lat, lng}
+ * @param {number} locationId - ID of the current location being guessed
+ */
+
 function Map({ onGuessSubmit, showResult, correctLocation, guessedLocation, locationId }) {
   // Convert array format to object format if needed
   const formattedLocation = Array.isArray(correctLocation) ? {
@@ -71,11 +99,12 @@ function Map({ onGuessSubmit, showResult, correctLocation, guessedLocation, loca
   }
 
   return (
-    <div className="w-full h-[400px] rounded-lg overflow-hidden shadow-md relative z-0">
+    <div className="w-full h-full rounded-lg overflow-hidden shadow-md relative z-0">
       <MapContainer
         center={[20, 0]}
         zoom={2}
         className="w-full h-full"
+        style={{ height: '100%' }}
       >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

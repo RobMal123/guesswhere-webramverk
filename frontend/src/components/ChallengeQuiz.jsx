@@ -163,52 +163,75 @@ function ChallengeQuiz() {
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
-  if (loading) return <div className="text-center p-8">Loading challenge...</div>;
-  if (error) return <div className="text-center p-8 text-red-600">Error: {error}</div>;
-  if (!currentLocation) return <div className="text-center p-8">Loading location...</div>;
+  if (loading) return (
+    <div className="flex items-center justify-center p-8">
+      <div className="text-2xl font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+        Loading challenge...
+      </div>
+    </div>
+  );
+
+  if (error) return (
+    <div className="flex items-center justify-center p-8">
+      <div className="text-2xl font-semibold text-red-600">Error: {error}</div>
+    </div>
+  );
+
+  if (!currentLocation) return (
+    <div className="flex items-center justify-center p-8">
+      <div className="text-2xl font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+        Loading location...
+      </div>
+    </div>
+  );
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 space-y-6">
-      <div className="flex justify-between items-center mb-4">
-        <div className="text-lg font-bold text-gray-800">Round {currentRound} of {locations.length}</div>
-        <div className="flex items-center gap-4">
-          <div className="text-gray-700">Score: {score}</div>
-          <div className={`${timeElapsed > 45 ? 'text-red-600' : 'text-gray-700'}`}>
+    <div className="p-8 w-full max-w-7xl mx-auto">
+      {/* Header Section */}
+      <div className="flex justify-between items-center mb-8">
+        <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+          Round {currentRound} of {locations.length}
+        </h2>
+        <div className="flex items-center gap-6">
+          <div className="text-xl font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            Score: {score}
+          </div>
+          <div className={`text-xl font-semibold ${timeElapsed > 45 ? 'text-red-600' : 'bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent'}`}>
             Time: {formatTime(timeElapsed)}
           </div>
         </div>
       </div>
 
-      {/* Toggle buttons */}
-      <div className="flex gap-4 mb-4">
+      {/* Toggle Buttons */}
+      <div className="flex gap-4 mb-6">
         <button
           onClick={() => setShowMap(false)}
-          className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all duration-200
+          className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-300 transform
             ${!showMap 
-              ? 'bg-blue-500 text-white shadow-md' 
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              ? 'bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-lg hover:shadow-blue-500/30 scale-[1.02]' 
+              : 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-700 hover:scale-[1.02]'}`}
         >
           View Image
         </button>
         <button
           onClick={() => setShowMap(true)}
-          className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all duration-200
+          className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-300 transform
             ${showMap 
-              ? 'bg-blue-500 text-white shadow-md' 
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              ? 'bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-lg hover:shadow-blue-500/30 scale-[1.02]' 
+              : 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-700 hover:scale-[1.02]'}`}
         >
           View Map
         </button>
       </div>
 
-      {/* Content container with smooth transition */}
-      <div className="relative w-full" style={{ height: 'calc(100vh - 300px)' }}>
+      {/* Main Content Container */}
+      <div className="relative w-full h-[600px] rounded-2xl overflow-hidden shadow-xl bg-gradient-to-br from-gray-800 to-gray-900">
         {currentLocation && (
-          <div className={`absolute w-full h-full transition-opacity duration-300 ${showMap ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+          <div className={`absolute inset-0 transition-opacity duration-300 ${showMap ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
             <img 
               src={`http://localhost:8000/images/${currentLocation.image_url.replace('images/', '')}`} 
               alt="Guess this location" 
-              className="w-full h-full object-contain bg-gray-50 rounded-lg"
+              className="w-full h-full object-cover"
               onError={(e) => {
                 console.error('Image failed to load:', e.target.src);
                 setError('Failed to load image');
@@ -217,7 +240,7 @@ function ChallengeQuiz() {
           </div>
         )}
         
-        <div className={`absolute w-full h-full transition-opacity duration-300 ${!showMap ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+        <div className={`absolute inset-0 transition-opacity duration-300 ${!showMap ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
           <Map
             key={mapKey}
             onGuessSubmit={handleGuessSubmit}
@@ -229,21 +252,29 @@ function ChallengeQuiz() {
         </div>
       </div>
       
+      {/* Results Section */}
       {showResult && (
-        <div className="text-center space-y-4 mt-4">
-          <h2 className="text-xl font-bold text-gray-800">Round Score: {score} points</h2>
-          <p className="text-gray-700">
-            You were {distance} km away from {currentLocation.name || 'this location'}!
-          </p>
-          <p className="text-gray-700">Time: {formatTime(timeElapsed)}</p>
-          <button 
-            onClick={handleNextRound}
-            className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg 
-                     shadow-md hover:from-blue-600 hover:to-blue-700 transform hover:scale-105 
-                     transition-all duration-200"
-          >
-            {currentRound >= locations.length ? 'See Results' : 'Next Location'}
-          </button>
+        <div className="mt-8 p-6 rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 text-white shadow-xl">
+          <div className="space-y-4 text-center">
+            <h2 className="text-2xl font-bold">
+              Round Score: {score} points
+            </h2>
+            <p className="text-gray-300 text-lg">
+              You were {Math.round(distance)} km away from {currentLocation.name || 'this location'}!
+            </p>
+            <p className="text-gray-300 text-lg">
+              Time taken: {formatTime(timeElapsed)}
+            </p>
+            <button 
+              onClick={handleNextRound}
+              className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-700 
+                       text-white rounded-xl shadow-lg hover:shadow-blue-500/30 
+                       transform hover:scale-[1.02] transition-all duration-300
+                       max-w-xs mx-auto"
+            >
+              {currentRound >= locations.length ? 'See Results' : 'Next Location'}
+            </button>
+          </div>
         </div>
       )}
     </div>
