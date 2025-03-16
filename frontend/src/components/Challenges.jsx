@@ -263,13 +263,23 @@ function Challenges() {
               <select 
                 className="flex-1 p-3 rounded-xl bg-white/10 border border-white/20 
                          backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-white/30 
-                         text-white"
+                         text-white [&>option]:bg-gray-800 [&>option]:text-white"
                 value={selectedFriend || ''}
                 onChange={(e) => setSelectedFriend(e.target.value)}
+                style={{
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none',
+                  appearance: 'none',
+                  backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 0.5rem center',
+                  backgroundSize: '1.5em 1.5em',
+                  paddingRight: '2.5rem'
+                }}
               >
-                <option value="">Select a friend</option>
+                <option value="" className="bg-gray-800 text-white py-2">Select a friend</option>
                 {friends.map(friend => (
-                  <option key={friend.id} value={friend.id}>
+                  <option key={friend.id} value={friend.id} className="bg-gray-800 text-white py-2">
                     {friend.username}
                   </option>
                 ))}

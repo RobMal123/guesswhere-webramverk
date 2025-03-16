@@ -255,18 +255,49 @@ logger = logging.getLogger(__name__)
 
 
 @app.get("/leaderboard/", response_model=List[schemas.LeaderboardEntry])
-def get_leaderboard(db: Session = Depends(get_db)):
+def get_leaderboard(category: Optional[str] = None, db: Session = Depends(get_db)):
     try:
-        leaderboard = (
-            db.query(
-                models.Leaderboard,
-                models.User.username,
+        # Start with base query
+        query = db.query(
+            models.Leaderboard,
+            models.User.username,
+        ).join(models.User)
+
+        if category and category.lower() != "all":
+            # Get the category ID
+            category_obj = (
+                db.query(models.Category)
+                .filter(func.lower(models.Category.name) == func.lower(category))
+                .first()
             )
-            .join(models.User)
-            .order_by(models.Leaderboard.highest_score.desc())
-            .limit(10)
-            .all()
-        )
+
+            if not category_obj:
+                raise HTTPException(
+                    status_code=404, detail=f"Category '{category}' not found"
+                )
+
+            # Subquery to get the highest score per user for the specific category
+            category_scores = (
+                db.query(
+                    models.Score.user_id,
+                    func.sum(models.Score.score).label("category_score"),
+                )
+                .join(models.Location)
+                .filter(models.Location.category_id == category_obj.id)
+                .group_by(models.Score.user_id)
+                .subquery()
+            )
+
+            # Join with the category scores and order by category-specific scores
+            query = query.join(
+                category_scores, models.Leaderboard.user_id == category_scores.c.user_id
+            ).order_by(category_scores.c.category_score.desc())
+        else:
+            # If no category specified, order by overall highest score
+            query = query.order_by(models.Leaderboard.highest_score.desc())
+
+        # Limit to top 10
+        leaderboard = query.limit(10).all()
 
         return [
             {
