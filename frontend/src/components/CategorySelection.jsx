@@ -16,7 +16,7 @@ function CategorySelection({ onCategorySelect }) {
     'Mountain': '⛰️',
     'Castle': '🏰',
     'Bridge': '🌉',
-    'Harbor': '🏘️',
+    'Harbor': '⚓',
     'River': '🌉',
     'Lake': '🌊',
     'Forest': '🌲',

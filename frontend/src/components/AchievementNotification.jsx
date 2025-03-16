@@ -10,9 +10,11 @@ import React from 'react';
  *   @param {string} achievement.name - Name of the achievement
  *   @param {string} achievement.description - Description of the achievement
  *   @param {number} achievement.points_required - Points required for the achievement
+ * @param {number} totalNewAchievements - Total number of new achievements earned
  * @param {Function} onClose - Callback function to handle notification dismissal
+ * @param {Function} onViewAll - Callback function to handle viewing all achievements
  */
-function AchievementNotification({ achievement, onClose }) {
+function AchievementNotification({ achievement, totalNewAchievements, onClose, onViewAll }) {
   /**
    * Determines the visual styling based on achievement point requirements.
    * Returns different color schemes for different achievement tiers:
@@ -73,34 +75,52 @@ function AchievementNotification({ achievement, onClose }) {
 
   return (
     <div className={`fixed bottom-5 right-5 bg-gradient-to-r ${styles.background} p-6 
-                    rounded-xl shadow-2xl animate-slide-in flex items-start gap-4 z-[9999] 
+                    rounded-xl shadow-2xl animate-slide-in flex flex-col gap-4 z-[9999] 
                     max-w-sm border ${styles.border} backdrop-blur-sm`}>
-      <div className="flex-1 text-white">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="text-2xl animate-bounce">🏆</span>
-          <h3 className={`text-lg font-bold bg-gradient-to-r ${styles.title} 
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-2xl animate-bounce">🏆</span>
+            <h3 className={`text-lg font-bold bg-gradient-to-r ${styles.title} 
                          bg-clip-text text-transparent`}>
-            Achievement Unlocked!
-          </h3>
+              Achievement Unlocked!
+            </h3>
+          </div>
+          
+          <h4 className={`text-base font-semibold mb-2 ${styles.heading}`}>
+            {achievement.name}
+          </h4>
+          
+          <p className={`text-sm ${styles.text} leading-relaxed`}>
+            {achievement.description}
+          </p>
         </div>
         
-        <h4 className={`text-base font-semibold mb-2 ${styles.heading}`}>
-          {achievement.name}
-        </h4>
-        
-        <p className={`text-sm ${styles.text} leading-relaxed`}>
-          {achievement.description}
-        </p>
-      </div>
-      
-      <button 
-        onClick={onClose}
-        className="bg-red-500 hover:bg-red-600 transition-colors duration-200 
+        <button 
+          onClick={onClose}
+          className="bg-red-500 hover:bg-red-600 transition-colors duration-200 
                    w-6 h-6 flex items-center justify-center rounded-full 
                    focus:outline-none focus:ring-2 focus:ring-red-400 
                    focus:ring-offset-2 shadow-sm"
+        >
+          <span className="text-white text-xl leading-none">&times;</span>
+        </button>
+      </div>
+
+      {/* Additional Achievements Info */}
+      {totalNewAchievements > 1 && (
+        <div className={`text-sm ${styles.text} mt-2`}>
+          +{totalNewAchievements - 1} more {totalNewAchievements - 1 === 1 ? 'achievement' : 'achievements'} unlocked!
+        </div>
+      )}
+
+      {/* View All Link */}
+      <button
+        onClick={onViewAll}
+        className={`text-sm ${styles.text} mt-1 underline hover:no-underline 
+                   transition-all duration-200 text-left`}
       >
-        <span className="text-white text-xl leading-none">&times;</span>
+        View all achievements →
       </button>
     </div>
   );

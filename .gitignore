@@ -54,6 +54,8 @@ yarn-error.log*
 /backend/images/*
 !/backend/images/.gitkeep
 
+/images/*
+
 # Logs
 *.log
 logs/ 

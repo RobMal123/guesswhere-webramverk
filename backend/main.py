@@ -270,9 +270,10 @@ def get_leaderboard(db: Session = Depends(get_db)):
 
         return [
             {
-                "id": entry.Leaderboard.user_id,
+                "id": entry.Leaderboard.id,
+                "user_id": entry.Leaderboard.user_id,
                 "username": entry.username,
-                "score": entry.Leaderboard.highest_score,
+                "highest_score": entry.Leaderboard.highest_score,
                 "last_updated": entry.Leaderboard.last_updated,
             }
             for entry in leaderboard
@@ -609,9 +610,40 @@ async def end_game_session(
     if not session:
         raise HTTPException(status_code=404, detail="Game session not found")
 
+    # Calculate total score for this session
+    total_session_score = (
+        db.query(func.sum(models.Score.score))
+        .filter(models.Score.game_session_id == session_id)
+        .scalar()
+        or 0
+    )
+
+    # Get or create leaderboard entry for the user
+    leaderboard_entry = (
+        db.query(models.Leaderboard)
+        .filter(models.Leaderboard.user_id == current_user.id)
+        .first()
+    )
+
+    if leaderboard_entry:
+        # Update highest score if this session's score is higher
+        if total_session_score > leaderboard_entry.highest_score:
+            leaderboard_entry.highest_score = total_session_score
+    else:
+        # Create new leaderboard entry
+        leaderboard_entry = models.Leaderboard(
+            user_id=current_user.id, highest_score=total_session_score
+        )
+        db.add(leaderboard_entry)
+
     session.ended_at = func.now()
     db.commit()
-    return {"message": "Game session ended"}
+
+    return {
+        "message": "Game session ended",
+        "total_score": total_session_score,
+        "is_high_score": leaderboard_entry.highest_score == total_session_score,
+    }
 
 
 @app.post("/friends/add/{friend_id}")

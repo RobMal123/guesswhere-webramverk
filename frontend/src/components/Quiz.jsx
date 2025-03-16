@@ -79,6 +79,42 @@ function Quiz({ category, onGameComplete }) {
 
   const handleGameComplete = async (totalScore) => {
     await endGameSession();
+
+    // Check for new achievements after game completion
+    try {
+      const token = localStorage.getItem('token');
+      const achievementsResponse = await fetch('http://localhost:8000/users/achievements/', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (achievementsResponse.ok) {
+        const achievementsData = await achievementsResponse.json();
+        // Compare with previous achievements to find new ones
+        const newOnes = achievementsData.filter(achievement => 
+          !newAchievements.some(existing => 
+            existing.achievement_id === achievement.achievement_id
+          )
+        );
+        
+        if (newOnes.length > 0) {
+          // Sort by points required (descending) and take the highest one
+          const highestAchievement = newOnes.reduce((highest, current) => 
+            (current.achievement.points_required > highest.achievement.points_required) 
+              ? current 
+              : highest
+          );
+          
+          setCurrentAchievement(highestAchievement);
+          setShowAchievement(true);
+          setNewAchievements(achievementsData);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch achievements:', error);
+    }
+
     onGameComplete(totalScore);
   };
 
@@ -149,35 +185,6 @@ function Quiz({ category, onGameComplete }) {
       setTotalScore(prevTotal => prevTotal + data.score);
       setDistance(data.distance);
       setShowResult(true);
-
-      // Fetch new achievements after submitting guess
-      const achievementsResponse = await fetch('http://localhost:8000/users/achievements/', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (achievementsResponse.ok) {
-        const achievementsData = await achievementsResponse.json();
-        // Compare with previous achievements to find new ones
-        const newOnes = achievementsData.filter(achievement => 
-          !newAchievements.some(existing => 
-            existing.achievement_id === achievement.achievement_id
-          )
-        );
-        
-        if (newOnes.length > 0) {
-          setNewAchievements(achievementsData);
-          // Show achievements one by one
-          newOnes.forEach((achievement, index) => {
-            setTimeout(() => {
-              setCurrentAchievement(achievement);
-              setShowAchievement(true);
-            }, index * 3000); // Show each achievement for 3 seconds
-          });
-        }
-      }
-
     } catch (error) {
       console.error('Detailed error:', error);
       setError(error.message);
@@ -187,6 +194,13 @@ function Quiz({ category, onGameComplete }) {
   const handleCloseAchievement = () => {
     setShowAchievement(false);
     setCurrentAchievement(null);
+  };
+
+  const handleViewAllAchievements = () => {
+    // Close the current notification
+    handleCloseAchievement();
+    // Navigate to achievements page (you can adjust this based on your routing setup)
+    window.location.href = '/achievements';
   };
 
   const handleNextRound = () => {
@@ -322,7 +336,9 @@ function Quiz({ category, onGameComplete }) {
       {showAchievement && currentAchievement && (
         <AchievementNotification 
           achievement={currentAchievement.achievement}
+          totalNewAchievements={newAchievements.length}
           onClose={handleCloseAchievement}
+          onViewAll={handleViewAllAchievements}
         />
       )}
     </div>

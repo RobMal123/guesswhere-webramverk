@@ -60,7 +60,7 @@ function LandingPage() {
               {/* Step 1 */}
               <div className="p-6 rounded-xl backdrop-blur-sm bg-white/5 border border-white/10 
                             transform hover:scale-105 transition-all duration-300 text-left">
-                <h3 className="text-lg md:text-xl font-bold text-white mb-3">1. Choose Mode</h3>
+                <h3 className="text-lg md:text-xl font-bold text-white mb-3">1. Choose Category</h3>
                 <p className="text-white/80">Select from various location categories like beaches, mountains, or cities.</p>
               </div>
 

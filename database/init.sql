@@ -101,7 +101,11 @@ CREATE INDEX idx_user_achievements_user ON user_achievements(user_id);
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
+    IF TG_TABLE_NAME = 'leaderboard' THEN
+        NEW.last_updated = CURRENT_TIMESTAMP;
+    ELSE
+        NEW.updated_at = CURRENT_TIMESTAMP;
+    END IF;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
