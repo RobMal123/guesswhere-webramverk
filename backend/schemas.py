@@ -16,6 +16,12 @@ class UserCreate(UserBase):
 
 class User(UserBase):
     id: int
+    is_admin: bool
+    email_verified: bool = False
+    verification_token: Optional[str] = None
+    verification_token_expires: Optional[datetime] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

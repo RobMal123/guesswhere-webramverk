@@ -129,22 +129,22 @@ function Auth({ onLogin, isRegister = false }) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 relative z-10">
+    <div className="relative z-10 flex items-center justify-center min-h-screen p-6">
       <div className="w-full max-w-md">
-        <div className="backdrop-blur-sm bg-white/10 border border-white/20 rounded-2xl p-8 shadow-xl">
-          <h2 className="text-4xl font-bold text-center text-white mb-8">
+        <div className="p-8 border shadow-xl backdrop-blur-sm bg-white/10 border-white/20 rounded-2xl">
+          <h2 className="mb-8 text-4xl font-bold text-center text-white">
             {isLogin ? 'Welcome Back!' : 'Create Account'}
           </h2>
           
           {error && (
-            <div className="bg-red-500/10 backdrop-blur-sm border border-red-500/20 p-4 rounded-xl mb-6">
-              <p className="text-red-200 font-medium text-center">{error}</p>
+            <div className="p-4 mb-6 border bg-red-500/10 backdrop-blur-sm border-red-500/20 rounded-xl">
+              <p className="font-medium text-center text-red-200">{error}</p>
             </div>
           )}
           
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">
+              <label className="block mb-2 text-sm font-medium text-white/80">
                 Username
               </label>
               <input
@@ -152,9 +152,7 @@ function Auth({ onLogin, isRegister = false }) {
                 name="username"
                 value={formData.username}
                 onChange={handleChange}
-                className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 
-                         backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-white/30 
-                         text-white placeholder-white/60"
+                className="w-full px-4 py-3 text-white border rounded-xl bg-white/10 border-white/20 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-white/30 placeholder-white/60"
                 required
               />
             </div>
@@ -162,7 +160,7 @@ function Auth({ onLogin, isRegister = false }) {
             {!isLogin && (
               <>
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
+                  <label className="block mb-2 text-sm font-medium text-white/80">
                     Email
                   </label>
                   <input
@@ -170,15 +168,13 @@ function Auth({ onLogin, isRegister = false }) {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 
-                             backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-white/30 
-                             text-white placeholder-white/60"
+                    className="w-full px-4 py-3 text-white border rounded-xl bg-white/10 border-white/20 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-white/30 placeholder-white/60"
                     required
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
+                  <label className="block mb-2 text-sm font-medium text-white/80">
                     Password
                   </label>
                   <input
@@ -186,15 +182,13 @@ function Auth({ onLogin, isRegister = false }) {
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 
-                             backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-white/30 
-                             text-white placeholder-white/60"
+                    className="w-full px-4 py-3 text-white border rounded-xl bg-white/10 border-white/20 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-white/30 placeholder-white/60"
                     required
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
+                  <label className="block mb-2 text-sm font-medium text-white/80">
                     Confirm Password
                   </label>
                   <input
@@ -202,9 +196,7 @@ function Auth({ onLogin, isRegister = false }) {
                     name="confirmPassword"
                     value={formData.confirmPassword}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 
-                             backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-white/30 
-                             text-white placeholder-white/60"
+                    className="w-full px-4 py-3 text-white border rounded-xl bg-white/10 border-white/20 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-white/30 placeholder-white/60"
                     required
                   />
                 </div>
@@ -213,7 +205,7 @@ function Auth({ onLogin, isRegister = false }) {
             
             {isLogin && (
               <div>
-                <label className="block text-white/80 text-sm font-medium mb-2">
+                <label className="block mb-2 text-sm font-medium text-white/80">
                   Password
                 </label>
                 <input
@@ -221,9 +213,7 @@ function Auth({ onLogin, isRegister = false }) {
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 
-                           backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-white/30 
-                           text-white placeholder-white/60"
+                  className="w-full px-4 py-3 text-white border rounded-xl bg-white/10 border-white/20 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-white/30 placeholder-white/60"
                   required
                 />
               </div>

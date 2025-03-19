@@ -23,7 +23,12 @@ from pathlib import Path
 import re
 from urllib.parse import unquote
 from fastapi.responses import JSONResponse
+from email_utils import send_verification_email
+import secrets
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -393,22 +398,45 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 @app.post("/users/", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    # Check if user already exists
-    db_user = (
-        db.query(models.User).filter(models.User.username == user.username).first()
-    )
-    if db_user:
-        raise HTTPException(status_code=400, detail="Username already registered")
+    try:
+        # Check if user already exists
+        db_user = db.query(models.User).filter(models.User.email == user.email).first()
+        if db_user:
+            raise HTTPException(status_code=400, detail="Email already registered")
 
-    # Create new user with hashed password
-    hashed_password = get_password_hash(user.password)
-    db_user = models.User(
-        username=user.username, email=user.email, hashed_password=hashed_password
-    )
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    return db_user
+        # Generate verification token
+        verification_token = secrets.token_urlsafe(32)
+        logger.info(f"Generated verification token for {user.email}")
+
+        # Create new user with hashed password and verification token
+        hashed_password = get_password_hash(user.password)
+        db_user = models.User(
+            username=user.username,
+            email=user.email,
+            hashed_password=hashed_password,
+            verification_token=verification_token,
+        )
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        logger.info(f"Created new user: {user.email}")
+
+        # Send verification email
+        logger.info(f"Attempting to send verification email to {user.email}")
+        email_sent = send_verification_email(user.email, verification_token)
+        if not email_sent:
+            logger.error(f"Failed to send verification email to {user.email}")
+            # We should still return the user, but log the error
+            # The user can request a new verification email later
+
+        return db_user
+    except Exception as e:
+        logger.error(f"Error in create_user: {str(e)}")
+        logger.error(f"Error type: {type(e).__name__}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred while creating the user: {str(e)}",
+        )
 
 
 @app.post("/login", response_model=schemas.Token)
@@ -438,6 +466,13 @@ async def login(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
+        )
+
+    # Check if email is verified
+    if not user.email_verified:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Please verify your email before logging in",
         )
 
     access_token = create_access_token(data={"sub": user.username})
@@ -1492,3 +1527,32 @@ async def delete_challenge(
     db.delete(challenge)
     db.commit()
     return {"message": "Challenge deleted successfully"}
+
+
+@app.get("/verify-email/{token}")
+async def verify_email(token: str, db: Session = Depends(get_db)):
+    # Find user with matching verification token
+    user = db.query(models.User).filter(models.User.verification_token == token).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid verification token",
+        )
+
+    # Check if token is expired
+    if (
+        user.verification_token_expires
+        and user.verification_token_expires < datetime.now()
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Verification token has expired",
+        )
+
+    # Mark email as verified and clear verification token
+    user.email_verified = True
+    user.verification_token = None
+    user.verification_token_expires = None
+    db.commit()
+
+    return {"message": "Email verified successfully"}
