@@ -23,7 +23,7 @@ from pathlib import Path
 import re
 from urllib.parse import unquote
 from fastapi.responses import JSONResponse
-from email_utils import send_verification_email
+from email_utils import send_verification_email, send_password_reset_email
 import secrets
 
 # Set up logging
@@ -1556,3 +1556,63 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
     db.commit()
 
     return {"message": "Email verified successfully"}
+
+
+@app.post("/forgot-password")
+async def forgot_password(email: str = Form(...), db: Session = Depends(get_db)):
+    """Request a password reset email"""
+    user = db.query(models.User).filter(models.User.email == email).first()
+
+    if not user:
+        # Return success even if user not found to prevent email enumeration
+        return {
+            "message": "If an account exists with this email, a password reset link will be sent."
+        }
+
+    # Generate reset token
+    reset_token = secrets.token_urlsafe(32)
+    user.reset_token = reset_token
+    user.reset_token_expires = datetime.utcnow() + timedelta(hours=1)
+    db.commit()
+
+    # Send reset email
+    email_sent = send_password_reset_email(email, reset_token)
+
+    if not email_sent:
+        # If email fails, clear the reset token
+        user.reset_token = None
+        user.reset_token_expires = None
+        db.commit()
+        raise HTTPException(
+            status_code=500, detail="Failed to send password reset email"
+        )
+
+    return {
+        "message": "If an account exists with this email, a password reset link will be sent."
+    }
+
+
+@app.post("/reset-password/{token}")
+async def reset_password(
+    token: str, new_password: str = Form(...), db: Session = Depends(get_db)
+):
+    """Reset password using the reset token"""
+    user = (
+        db.query(models.User)
+        .filter(
+            models.User.reset_token == token,
+            models.User.reset_token_expires > datetime.utcnow(),
+        )
+        .first()
+    )
+
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+
+    # Update password and clear reset token
+    user.hashed_password = get_password_hash(new_password)
+    user.reset_token = None
+    user.reset_token_expires = None
+    db.commit()
+
+    return {"message": "Password has been reset successfully"}

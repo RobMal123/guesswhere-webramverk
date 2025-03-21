@@ -6,7 +6,12 @@ CREATE TABLE users (
     hashed_password VARCHAR(200) NOT NULL,
     is_admin BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    email_verified BOOLEAN DEFAULT FALSE,
+    verification_token VARCHAR(255) UNIQUE,
+    verification_token_expires TIMESTAMP WITH TIME ZONE,
+    reset_token VARCHAR(255) UNIQUE,
+    reset_token_expires TIMESTAMP WITH TIME ZONE
 );
 
 -- Categories table to normalize categories instead of using a string

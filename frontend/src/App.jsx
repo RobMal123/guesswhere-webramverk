@@ -12,6 +12,7 @@ import LandingPage from './components/LandingPage';
 import Challenges from './components/Challenges';
 import ChallengeQuiz from './components/ChallengeQuiz';
 import ChallengeResults from './components/ChallengeResults';
+import PasswordReset from './components/PasswordReset';
 
 function AppContent() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -110,7 +111,7 @@ function AppContent() {
             onLogout={handleLogout}
           />
         )}
-        <div className="container mx-auto px-4">
+        <div className="container px-4 mx-auto">
           {children}
         </div>
       </div>
@@ -124,6 +125,8 @@ function AppContent() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Auth onLogin={handleLogin} />} />
           <Route path="/register" element={<Auth onLogin={handleLogin} isRegister={true} />} />
+          <Route path="/forgot-password" element={<PasswordReset />} />
+          <Route path="/reset-password/:token" element={<PasswordReset />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </AppWrapper>
@@ -135,10 +138,10 @@ function AppContent() {
       <Routes>
         <Route path="/admin" element={isAdmin ? <Admin /> : <Navigate to="/" />} />
         <Route path="/game-complete" element={
-          <div className="relative z-10 p-8 w-full max-w-7xl mx-auto">
-            <div className="backdrop-blur-sm bg-white/10 border border-white/20 rounded-2xl p-8 shadow-xl mb-8">
+          <div className="relative z-10 w-full p-8 mx-auto max-w-7xl">
+            <div className="p-8 mb-8 border shadow-xl backdrop-blur-sm bg-white/10 border-white/20 rounded-2xl">
               <div className="text-center">
-                <h2 className="text-3xl font-bold mb-6 text-white">Game Complete!</h2>
+                <h2 className="mb-6 text-3xl font-bold text-white">Game Complete!</h2>
                 <div className="space-y-4">
                   <p className="text-2xl text-white/90">Total Score: {finalScore}</p>
                   <p className="text-xl text-white/80">Average Score per Round: {Math.round(averageScore)}</p>

@@ -67,3 +67,43 @@ def is_token_expired(token_expires: datetime) -> bool:
     if not token_expires:
         return True
     return datetime.now() > token_expires
+
+
+def send_password_reset_email(email: str, reset_token: str) -> bool:
+    """
+    Send a password reset email to the user.
+    Returns True if successful, False otherwise.
+    """
+    try:
+        msg = MIMEMultipart()
+        msg["From"] = SMTP_USERNAME
+        msg["To"] = email
+        msg["Subject"] = "Reset your password"
+
+        reset_link = f"{FRONTEND_URL}/reset-password/{reset_token}"
+
+        body = f"""
+        Hello!
+
+        You have requested to reset your password. Click the link below to set a new password:
+        {reset_link}
+
+        This link will expire in 1 hour.
+
+        If you didn't request a password reset, you can safely ignore this email.
+
+        Best regards,
+        The GuessWhere Team
+        """
+
+        msg.attach(MIMEText(body, "plain"))
+
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            server.send_message(msg)
+
+        return True
+    except Exception as e:
+        logger.error(f"Error sending password reset email: {str(e)}")
+        return False

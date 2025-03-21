@@ -216,6 +216,15 @@ function Auth({ onLogin, isRegister = false }) {
                   className="w-full px-4 py-3 text-white border rounded-xl bg-white/10 border-white/20 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-white/30 placeholder-white/60"
                   required
                 />
+                <div className="mt-2 text-right">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/forgot-password')}
+                    className="text-sm transition-colors text-white/80 hover:text-white"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
               </div>
             )}
 
