@@ -3,7 +3,10 @@ import { useParams } from 'react-router-dom';
 
 function Profile() {
   const { userId } = useParams(); // Get userId from URL if viewing another user's profile
-  const [userStats, setUserStats] = useState(null);
+  const [userStats, setUserStats] = useState({
+    averageScore: 0,
+    totalGuesses: 0
+  });
   const [achievements, setAchievements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -57,7 +60,17 @@ function Profile() {
       const token = localStorage.getItem('token');
       const headers = { 'Authorization': `Bearer ${token}` };
 
-      // If userId is provided, fetch that user's profile, otherwise fetch current user's profile
+      // Fetch user stats
+      const statsResponse = await fetch(
+        userId 
+          ? `http://localhost:8000/users/${userId}/stats/`
+          : 'http://localhost:8000/users/stats/',
+        { headers }
+      );
+      const statsData = await statsResponse.json();
+      setUserStats(statsData);
+
+      // Fetch achievements
       const achievementsResponse = await fetch(
         userId 
           ? `http://localhost:8000/users/${userId}/achievements/`
@@ -111,24 +124,40 @@ function Profile() {
 
   return (
     <div className="relative z-10">
-      <div className="p-8 w-full max-w-7xl mx-auto">
-        <div className="backdrop-blur-sm bg-white/10 rounded-2xl border border-white/20 p-8 shadow-lg">
-          <div className="border-b border-white/20 pb-6 mb-8">
+      <div className="w-full p-8 mx-auto max-w-7xl">
+        <div className="p-8 border shadow-lg backdrop-blur-sm bg-white/10 rounded-2xl border-white/20">
+          <div className="pb-6 mb-8 border-b border-white/20">
             <h1 className="text-3xl font-bold text-white">
               {profileUser ? `${profileUser.username}'s Profile` : 'Your Profile'}
             </h1>
           </div>
 
+          {/* Stats Section */}
+          <div className="grid grid-cols-2 gap-4 mb-8">
+            <div className="p-6 border rounded-xl bg-white/10 border-white/20 backdrop-blur-sm">
+              <h3 className="mb-2 text-sm font-medium text-white/80">Average Score</h3>
+              <p className="text-2xl font-bold text-white">
+                {userStats.averageScore.toFixed(2)}
+              </p>
+            </div>
+            <div className="p-6 border rounded-xl bg-white/10 border-white/20 backdrop-blur-sm">
+              <h3 className="mb-2 text-sm font-medium text-white/80">Total Guesses</h3>
+              <p className="text-2xl font-bold text-white">
+                {userStats.totalGuesses}
+              </p>
+            </div>
+          </div>
+
           <div className="space-y-8">
-            <h2 className="text-2xl font-bold text-white mb-6">Achievements</h2>
+            <h2 className="mb-6 text-2xl font-bold text-white">Achievements</h2>
             
             {Object.entries(achievementTiers).map(([tier, { name, range, styles }]) => (
               <div key={tier} className="mb-8">
-                <h3 className="text-xl font-semibold mb-4 pb-2 border-b border-white/20 text-white">
+                <h3 className="pb-2 mb-4 text-xl font-semibold text-white border-b border-white/20">
                   {name} ({range} points)
                 </h3>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {achievements[tier]?.map((achievement) => (
                     <div 
                       key={achievement.achievement.id} 
@@ -144,16 +173,16 @@ function Profile() {
                           {achievement.achievement.name}
                         </h4>
                       </div>
-                      <p className="text-white/90 text-sm leading-relaxed mb-3">
+                      <p className="mb-3 text-sm leading-relaxed text-white/90">
                         {achievement.achievement.description}
                       </p>
-                      <span className="text-xs text-white/75 block mt-auto">
+                      <span className="block mt-auto text-xs text-white/75">
                         Earned: {new Date(achievement.earned_at).toLocaleDateString()}
                       </span>
                     </div>
                   ))}
                   {!achievements[tier]?.length && (
-                    <p className="col-span-full text-center text-white/75 italic py-4">
+                    <p className="py-4 italic text-center col-span-full text-white/75">
                       No achievements in this tier yet
                     </p>
                   )}

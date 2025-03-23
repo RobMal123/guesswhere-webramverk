@@ -1651,3 +1651,54 @@ async def get_current_admin_user(
             detail="The user doesn't have enough privileges",
         )
     return current_user
+
+
+@app.get("/users/{user_id}/stats/")
+async def get_user_stats(
+    user_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get statistics for a specific user"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    # Get user's average score and total guesses
+    stats = (
+        db.query(
+            func.count(models.Score.id).label("totalGuesses"),
+            func.avg(models.Score.score).label("averageScore"),
+        )
+        .filter(models.Score.user_id == user_id)
+        .first()
+    )
+
+    return {
+        "averageScore": float(stats.averageScore if stats.averageScore else 0),
+        "totalGuesses": stats.totalGuesses,
+    }
+
+
+@app.get("/users/stats/")
+async def get_current_user_stats(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get statistics for the currently logged-in user"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    # Get user's average score and total guesses
+    stats = (
+        db.query(
+            func.count(models.Score.id).label("totalGuesses"),
+            func.avg(models.Score.score).label("averageScore"),
+        )
+        .filter(models.Score.user_id == current_user.id)
+        .first()
+    )
+
+    return {
+        "averageScore": float(stats.averageScore if stats.averageScore else 0),
+        "totalGuesses": stats.totalGuesses,
+    }
