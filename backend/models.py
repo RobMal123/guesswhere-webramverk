@@ -162,6 +162,23 @@ class Score(Base):
     game_session = relationship("GameSession", back_populates="scores")
 
 
+class CategoryLeaderboard(Base):
+    __tablename__ = "category_leaderboard"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    category_id = Column(Integer, ForeignKey("categories.id", ondelete="CASCADE"))
+    score = Column(Integer, nullable=False)
+    achieved_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("User")
+    category = relationship("Category")
+
+    # Unique constraint to prevent duplicate scores for the same user and category
+    __table_args__ = (UniqueConstraint("user_id", "category_id", "score"),)
+
+
 class Leaderboard(Base):
     __tablename__ = "leaderboard"
 

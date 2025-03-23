@@ -155,8 +155,10 @@ class LeaderboardEntry(BaseModel):
     id: int
     user_id: int
     username: str
-    highest_score: int
-    last_updated: datetime
+    category_id: int
+    category_name: str
+    score: int
+    achieved_at: datetime
 
     class Config:
         from_attributes = True

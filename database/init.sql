@@ -81,13 +81,68 @@ CREATE TABLE game_sessions (
     ended_at TIMESTAMP WITH TIME ZONE
 );
 
--- Leaderboard table for optimized score tracking
-CREATE TABLE leaderboard (
+-- Create new category_leaderboard table
+CREATE TABLE category_leaderboard (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    highest_score INTEGER NOT NULL CHECK (highest_score >= 0),
-    last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    category_id INTEGER REFERENCES categories(id) ON DELETE CASCADE,
+    score INTEGER NOT NULL CHECK (score >= 0),
+    achieved_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, category_id, score)
 );
+
+-- Create indexes for better performance
+CREATE INDEX idx_category_leaderboard_category ON category_leaderboard(category_id);
+CREATE INDEX idx_category_leaderboard_score ON category_leaderboard(score DESC);
+CREATE INDEX idx_category_leaderboard_user ON category_leaderboard(user_id);
+
+-- Create a function to update category leaderboard
+CREATE OR REPLACE FUNCTION update_category_leaderboard()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Insert the score into category_leaderboard if it's in the top 10 for that category
+    INSERT INTO category_leaderboard (user_id, category_id, score)
+    SELECT 
+        NEW.user_id,
+        l.category_id,
+        NEW.score
+    FROM locations l
+    WHERE l.id = NEW.location_id
+    AND (
+        SELECT COUNT(*)
+        FROM category_leaderboard cl
+        WHERE cl.category_id = l.category_id
+        AND cl.score >= NEW.score
+    ) < 10
+    ON CONFLICT (user_id, category_id, score) DO NOTHING;
+
+    -- Remove scores that are no longer in the top 10
+    DELETE FROM category_leaderboard cl
+    WHERE cl.category_id IN (
+        SELECT category_id
+        FROM locations
+        WHERE id = NEW.location_id
+    )
+    AND cl.score < (
+        SELECT MIN(score)
+        FROM (
+            SELECT score
+            FROM category_leaderboard
+            WHERE category_id = cl.category_id
+            ORDER BY score DESC
+            LIMIT 10
+        ) top_10
+    );
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger to update category leaderboard when a new score is added
+CREATE TRIGGER update_category_leaderboard_trigger
+    AFTER INSERT ON scores
+    FOR EACH ROW
+    EXECUTE FUNCTION update_category_leaderboard();
 
 -- Friends system for social interaction
 CREATE TABLE friends (

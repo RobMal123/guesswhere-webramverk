@@ -282,58 +282,67 @@ logger = logging.getLogger(__name__)
 @app.get("/leaderboard/", response_model=List[schemas.LeaderboardEntry])
 def get_leaderboard(category: Optional[str] = None, db: Session = Depends(get_db)):
     try:
-        # Start with base query
-        query = db.query(
-            models.Leaderboard,
-            models.User.username,
-        ).join(models.User)
+        # Start with base query that gets the highest score for each user in each category
+        query = (
+            db.query(
+                models.CategoryLeaderboard.id,
+                models.CategoryLeaderboard.user_id,
+                models.User.username,
+                models.CategoryLeaderboard.category_id,
+                models.Category.name.label("category_name"),
+                models.CategoryLeaderboard.score,
+                models.CategoryLeaderboard.achieved_at,
+            )
+            .join(models.User)
+            .join(models.Category)
+            .distinct(
+                models.CategoryLeaderboard.user_id,
+                models.CategoryLeaderboard.category_id,
+            )
+        )
 
         if category and category.lower() != "all":
-            # Get the category ID
-            category_obj = (
-                db.query(models.Category)
-                .filter(func.lower(models.Category.name) == func.lower(category))
-                .first()
+            # Filter by category if specified
+            query = query.filter(
+                func.lower(models.Category.name) == func.lower(category)
             )
 
-            if not category_obj:
-                raise HTTPException(
-                    status_code=404, detail=f"Category '{category}' not found"
-                )
+        # Order by score descending
+        query = query.order_by(
+            models.CategoryLeaderboard.category_id,
+            models.CategoryLeaderboard.user_id,
+            models.CategoryLeaderboard.score.desc(),
+        )
 
-            # Subquery to get the highest score per user for the specific category
-            category_scores = (
-                db.query(
-                    models.Score.user_id,
-                    func.sum(models.Score.score).label("category_score"),
-                )
-                .join(models.Location)
-                .filter(models.Location.category_id == category_obj.id)
-                .group_by(models.Score.user_id)
-                .subquery()
-            )
-
-            # Join with the category scores and order by category-specific scores
-            query = query.join(
-                category_scores, models.Leaderboard.user_id == category_scores.c.user_id
-            ).order_by(category_scores.c.category_score.desc())
+        if category and category.lower() != "all":
+            # If category specified, just get top 10
+            leaderboard = query.limit(10).all()
         else:
-            # If no category specified, order by overall highest score
-            query = query.order_by(models.Leaderboard.highest_score.desc())
-
-        # Limit to top 10
-        leaderboard = query.limit(10).all()
+            # If no category specified, get top 10 for each category
+            leaderboard = []
+            categories = db.query(models.Category).all()
+            for cat in categories:
+                cat_scores = (
+                    query.filter(models.Category.id == cat.id)
+                    .order_by(models.CategoryLeaderboard.score.desc())
+                    .limit(10)
+                    .all()
+                )
+                leaderboard.extend(cat_scores)
 
         return [
             {
-                "id": entry.Leaderboard.id,
-                "user_id": entry.Leaderboard.user_id,
+                "id": entry.id,
+                "user_id": entry.user_id,
                 "username": entry.username,
-                "highest_score": entry.Leaderboard.highest_score,
-                "last_updated": entry.Leaderboard.last_updated,
+                "category_id": entry.category_id,
+                "category_name": entry.category_name,
+                "score": entry.score,
+                "achieved_at": entry.achieved_at,
             }
             for entry in leaderboard
         ]
+
     except SQLAlchemyError as e:
         logger.error(f"Database error in leaderboard: {str(e)}")
         raise HTTPException(
@@ -703,6 +712,24 @@ async def end_game_session(
         .scalar()
         or 0
     )
+
+    # Get the category for this session's locations
+    session_category = (
+        db.query(models.Category)
+        .join(models.Location)
+        .join(models.Score)
+        .filter(models.Score.game_session_id == session_id)
+        .first()
+    )
+
+    if session_category:
+        # Create or update category leaderboard entry
+        category_leaderboard = models.CategoryLeaderboard(
+            user_id=current_user.id,
+            category_id=session_category.id,
+            score=total_session_score,
+        )
+        db.add(category_leaderboard)
 
     # Get or create leaderboard entry for the user
     leaderboard_entry = (

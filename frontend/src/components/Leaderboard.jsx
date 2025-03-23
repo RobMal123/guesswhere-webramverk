@@ -53,7 +53,22 @@ function Leaderboard({ category: initialCategory }) {
           throw new Error(data.detail || `Failed to fetch leaderboard: ${response.status}`);
         }
 
-        setLeaderboardData(data);
+        // Group scores by category when showing all categories
+        if (selectedCategory === 'all') {
+          const groupedData = data.reduce((acc, entry) => {
+            if (!acc[entry.category_name]) {
+              acc[entry.category_name] = [];
+            }
+            acc[entry.category_name].push(entry);
+            return acc;
+          }, {});
+          setLeaderboardData(groupedData);
+        } else {
+          // For single category, wrap the data in an object with category name as key
+          setLeaderboardData({
+            [selectedCategory]: data
+          });
+        }
       } catch (error) {
         console.error('Leaderboard fetch error:', error);
         setError(error.message);
@@ -75,19 +90,70 @@ function Leaderboard({ category: initialCategory }) {
 
   if (error) return (
     <div className="flex items-center justify-center p-8">
-      <div className="bg-red-500/10 backdrop-blur-sm border border-red-500/20 p-4 rounded-xl">
-        <p className="text-red-200 font-medium text-center">
+      <div className="p-4 border bg-red-500/10 backdrop-blur-sm border-red-500/20 rounded-xl">
+        <p className="font-medium text-center text-red-200">
           Error loading leaderboard: {error}
         </p>
       </div>
     </div>
   );
 
+  const renderLeaderboardTable = (data, categoryName = null) => (
+    <div className="mb-8 last:mb-0">
+      {categoryName && (
+        <h3 className="mb-4 text-xl font-semibold text-white">
+          {categoryName}
+        </h3>
+      )}
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr>
+              <th className="px-6 py-4 text-sm font-semibold tracking-wider text-left uppercase border-b text-white/80 border-white/10">
+                Rank
+              </th>
+              <th className="px-6 py-4 text-sm font-semibold tracking-wider text-left uppercase border-b text-white/80 border-white/10">
+                Player
+              </th>
+              <th className="px-6 py-4 text-sm font-semibold tracking-wider text-left uppercase border-b text-white/80 border-white/10">
+                Total Score
+              </th>
+              <th className="px-6 py-4 text-sm font-semibold tracking-wider text-left uppercase border-b text-white/80 border-white/10">
+                Last Updated
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/10">
+            {Array.isArray(data) && data.map((entry, index) => (
+              <tr 
+                key={entry.id}
+                className="transition-colors hover:bg-white/5"
+              >
+                <td className="px-6 py-4 text-sm whitespace-nowrap text-white/60">
+                  #{index + 1}
+                </td>
+                <td className="px-6 py-4 text-sm font-medium text-white whitespace-nowrap">
+                  {entry.username}
+                </td>
+                <td className="px-6 py-4 text-sm whitespace-nowrap text-white/60">
+                  {entry.score.toLocaleString()}
+                </td>
+                <td className="px-6 py-4 text-sm whitespace-nowrap text-white/60">
+                  {new Date(entry.achieved_at).toLocaleDateString()}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="backdrop-blur-sm bg-white/10 rounded-2xl border border-white/20 p-8 shadow-lg mx-auto my-8 max-w-4xl">
-      <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+    <div className="max-w-4xl p-8 mx-auto my-8 border shadow-lg backdrop-blur-sm bg-white/10 rounded-2xl border-white/20">
+      <div className="flex flex-col items-center justify-between gap-4 mb-8 md:flex-row">
         <h2 className="text-2xl font-semibold text-white">
-          Top 10 Players
+          {selectedCategory === 'all' ? 'Top Scores by Category' : 'Top 10 Scores'}
         </h2>
         
         {/* Category Selector */}
@@ -117,7 +183,7 @@ function Leaderboard({ category: initialCategory }) {
               <option 
                 key={cat.id} 
                 value={cat.id === 'all' ? 'all' : cat.name}
-                className="bg-gray-800 text-white py-2"
+                className="py-2 text-white bg-gray-800"
               >
                 {cat.name}
               </option>
@@ -126,50 +192,14 @@ function Leaderboard({ category: initialCategory }) {
         </div>
       </div>
       
-      {!leaderboardData.length ? (
-        <p className="text-center text-white/60">No scores recorded yet for this category.</p>
+      {Object.entries(leaderboardData).length === 0 ? (
+        <p className="text-center text-white/60">No scores recorded yet.</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-white/80 uppercase tracking-wider border-b border-white/10">
-                  Rank
-                </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-white/80 uppercase tracking-wider border-b border-white/10">
-                  Player
-                </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-white/80 uppercase tracking-wider border-b border-white/10">
-                  Highest Score
-                </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-white/80 uppercase tracking-wider border-b border-white/10">
-                  Last Updated
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/10">
-              {leaderboardData.map((entry, index) => (
-                <tr 
-                  key={entry.id}
-                  className="hover:bg-white/5 transition-colors"
-                >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white/60">
-                    #{index + 1}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
-                    {entry.username}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white/60">
-                    {entry.highest_score}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white/60">
-                    {new Date(entry.last_updated).toLocaleDateString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        Object.entries(leaderboardData).map(([categoryName, scores]) => (
+          <div key={categoryName}>
+            {renderLeaderboardTable(scores, selectedCategory === 'all' ? categoryName : null)}
+          </div>
+        ))
       )}
     </div>
   );
