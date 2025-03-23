@@ -27,6 +27,7 @@ function Auth({ onLogin, isRegister = false }) {
     confirmPassword: ''
   });
   const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
 
   /**
    * Handles form submission for both login and registration.
@@ -38,6 +39,7 @@ function Auth({ onLogin, isRegister = false }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+    setSuccessMessage(null);
 
     // Validate passwords match for registration
     if (!isLogin && formData.password !== formData.confirmPassword) {
@@ -90,6 +92,9 @@ function Auth({ onLogin, isRegister = false }) {
           throw new Error(data.detail || 'Registration failed');
         }
 
+        // Show success message with spam folder notice
+        setSuccessMessage("Registration successful! Please check your email (including spam folder) to verify your account.");
+
         // Automatically log in after successful registration
         const loginFormBody = new URLSearchParams();
         loginFormBody.append('username', formData.username);
@@ -139,6 +144,12 @@ function Auth({ onLogin, isRegister = false }) {
           {error && (
             <div className="p-4 mb-6 border bg-red-500/10 backdrop-blur-sm border-red-500/20 rounded-xl">
               <p className="font-medium text-center text-red-200">{error}</p>
+            </div>
+          )}
+
+          {successMessage && (
+            <div className="p-4 mb-6 border bg-green-500/10 backdrop-blur-sm border-green-500/20 rounded-xl">
+              <p className="font-medium text-center text-green-200">{successMessage}</p>
             </div>
           )}
           
@@ -243,6 +254,7 @@ function Auth({ onLogin, isRegister = false }) {
               onClick={() => {
                 setIsLogin(!isLogin);
                 setError(null);
+                setSuccessMessage(null);
                 setFormData({
                   username: '',
                   email: '',

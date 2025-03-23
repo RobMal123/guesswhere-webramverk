@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Map from './Map';
 import AchievementNotification from './AchievementNotification';
+import { useNavigate } from 'react-router-dom';
 
 function Quiz({ category, onGameComplete }) {
   const [currentImage, setCurrentImage] = useState(null);
@@ -23,6 +24,7 @@ function Quiz({ category, onGameComplete }) {
   const [currentAchievement, setCurrentAchievement] = useState(null);
   const [showMap, setShowMap] = useState(false);
   const [imageViewMode, setImageViewMode] = useState('cover');
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Reset game state when category changes
@@ -133,10 +135,14 @@ function Quiz({ category, onGameComplete }) {
       const url = `${baseUrl}${excludeParam}`;
       
       const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error('Failed to fetch location');
-      }
       const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error(`Unfortunately, there are no more locations available for ${category} category.`);
+        }
+        throw new Error('Unfortunately, there are no more locations available for this category.');
+      }
       
       console.log('Location data:', data);
       setUsedLocationIds(prev => [...prev, data.id]);
@@ -225,15 +231,23 @@ function Quiz({ category, onGameComplete }) {
   );
 
   if (error) return (
-    <div className="flex items-center justify-center p-8">
-      <div className="text-2xl font-semibold text-red-300">{error}</div>
+    <div className="flex flex-col items-center justify-center p-8 space-y-4">
+      <div className="p-6 text-xl font-semibold text-center text-white border rounded-2xl backdrop-blur-sm bg-white/10 border-white/20">
+        {error}
+      </div>
+      <button 
+        onClick={() => navigate('/')}
+        className="px-8 py-3 text-white transition-all duration-300 border rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-sm border-white/20 hover:shadow-lg transform hover:scale-[1.02]"
+      >
+        Back to Home
+      </button>
     </div>
   );
 
   return (
-    <div className="relative z-10 p-8 w-full max-w-7xl mx-auto">
+    <div className="relative z-10 w-full p-8 mx-auto max-w-7xl">
       {/* Header Section */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex items-center justify-between mb-8">
         <h2 className="text-3xl font-bold text-white">
           Round {roundNumber} of {TOTAL_ROUNDS}
         </h2>
@@ -283,9 +297,7 @@ function Quiz({ category, onGameComplete }) {
             {!showMap && (
               <button
                 onClick={() => setImageViewMode(prev => prev === 'cover' ? 'contain' : 'cover')}
-                className="absolute bottom-4 right-4 w-8 h-8 flex items-center justify-center
-                         rounded-lg bg-black/20 hover:bg-black/40 transition-all duration-200
-                         text-white/90 backdrop-blur-sm border border-white/20"
+                className="absolute flex items-center justify-center w-8 h-8 transition-all duration-200 border rounded-lg bottom-4 right-4 bg-black/20 hover:bg-black/40 text-white/90 backdrop-blur-sm border-white/20"
                 title={imageViewMode === 'cover' ? 'Show full image' : 'Fill frame'}
               >
                 <span className="text-base drop-shadow-lg">
@@ -310,12 +322,12 @@ function Quiz({ category, onGameComplete }) {
       
       {/* Results Section */}
       {showResult && (
-        <div className="mt-8 p-6 rounded-2xl backdrop-blur-sm bg-white/10 border border-white/20 text-white">
+        <div className="p-6 mt-8 text-white border rounded-2xl backdrop-blur-sm bg-white/10 border-white/20">
           <div className="space-y-4 text-center">
             <h2 className="text-2xl font-bold">
               Round Score: {score} points
             </h2>
-            <p className="text-white/80 text-lg">
+            <p className="text-lg text-white/80">
               You were {Math.round(distance)} km away from {locationName}!
             </p>
             <button 
