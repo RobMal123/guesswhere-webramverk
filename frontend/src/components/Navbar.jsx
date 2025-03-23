@@ -18,8 +18,8 @@ function Navbar({ isLoggedIn, isAdmin, onLogout }) {
   `;
 
   return (
-    <nav className="sticky top-0 z-50 px-8 py-4 bg-black/20 backdrop-blur-lg border-b border-white/10">
-      <div className="max-w-7xl mx-auto flex justify-between items-center">
+    <nav className="sticky top-0 z-50 px-8 py-4 border-b bg-black/20 backdrop-blur-lg border-white/10">
+      <div className="flex items-center justify-between mx-auto max-w-7xl">
         <div className="flex items-center gap-6">
           <button 
             className={`${buttonClass} border-blue-300/30 bg-blue-500/10 
@@ -36,7 +36,7 @@ function Navbar({ isLoggedIn, isAdmin, onLogout }) {
             <span className="text-white">
               Guess
             </span>
-            <span className="mx-1 transform hover:rotate-12 inline-block transition-transform duration-300">
+            <span className="inline-block mx-1 transition-transform duration-300 transform hover:rotate-12">
               📍
             </span>
             <span className="text-white">
@@ -55,6 +55,10 @@ function Navbar({ isLoggedIn, isAdmin, onLogout }) {
               <button className={`${buttonClass} hover:bg-blue-500/20`} onClick={() => navigate('/friends')}>
                 <span className="text-lg">👥</span>
                 Friends
+              </button>
+              <button className={`${buttonClass} hover:bg-blue-500/20`} onClick={() => navigate('/submit-location')}>
+                <span className="text-lg">📍</span>
+                Submit Location
               </button>
             </>
           )}

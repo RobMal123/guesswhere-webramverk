@@ -13,6 +13,7 @@ import Challenges from './components/Challenges';
 import ChallengeQuiz from './components/ChallengeQuiz';
 import ChallengeResults from './components/ChallengeResults';
 import PasswordReset from './components/PasswordReset';
+import SubmitLocation from './components/SubmitLocation';
 
 function AppContent() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -137,6 +138,9 @@ function AppContent() {
     <AppWrapper>
       <Routes>
         <Route path="/admin" element={isAdmin ? <Admin /> : <Navigate to="/" />} />
+        <Route path="/submit-location" element={
+          isLoggedIn ? <SubmitLocation /> : <Navigate to="/login" />
+        } />
         <Route path="/game-complete" element={
           <div className="relative z-10 w-full p-8 mx-auto max-w-7xl">
             <div className="p-8 mb-8 border shadow-xl backdrop-blur-sm bg-white/10 border-white/20 rounded-2xl">

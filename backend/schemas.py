@@ -100,6 +100,40 @@ class Location(BaseModel):
         from_attributes = True
 
 
+class PendingLocationBase(LocationBase):
+    image_url: str
+
+
+class PendingLocationCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    latitude: float
+    longitude: float
+    category_id: int
+    difficulty_level: str
+    country: str
+    region: str
+    image_url: str
+    status: str = "pending"
+
+
+class PendingLocation(PendingLocationBase):
+    id: int
+    user_id: int
+    image_url: str
+    created_at: datetime
+    status: str
+
+    @validator("image_url", pre=True)
+    def get_full_image_url(cls, v):
+        if not v.startswith("images/"):
+            return f"images/{v}"
+        return v
+
+    class Config:
+        from_attributes = True
+
+
 class GameSessionBase(BaseModel):
     user_id: int
 

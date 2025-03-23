@@ -19,6 +19,7 @@ function Admin() {
     averageScore: 0
   });
   const [locations, setLocations] = useState([]);
+  const [pendingLocations, setPendingLocations] = useState([]);
   const [users, setUsers] = useState([]);
   const [newLocation, setNewLocation] = useState({
     latitude: '',
@@ -88,6 +89,7 @@ function Admin() {
     fetchDashboardData();
     fetchCategories();
     fetchAchievements();
+    fetchPendingLocations();
   }, []);
 
   const fetchDashboardData = async () => {
@@ -145,7 +147,26 @@ function Admin() {
     }
   };
 
-/**
+  const fetchPendingLocations = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:8000/api/locations/pending', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch pending locations');
+      }
+      const data = await response.json();
+      setPendingLocations(data);
+    } catch (error) {
+      console.error('Error fetching pending locations:', error);
+      setPendingLocations([]);
+    }
+  };
+
+  /**
    * Handles the submission of a new location
    * Validates and uploads location data including image
    * @param {Event} e - The form submission event
@@ -373,49 +394,94 @@ function Admin() {
     }
   };
 
+  const handleApproveLocation = async (locationId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8000/api/locations/pending/${locationId}/approve`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to approve location');
+      }
+
+      // Refresh both locations and pending locations
+      await Promise.all([fetchDashboardData(), fetchPendingLocations()]);
+      setMessage('Location approved successfully!');
+    } catch (error) {
+      console.error('Error approving location:', error);
+      setError('Failed to approve location');
+    }
+  };
+
+  const handleRejectLocation = async (locationId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8000/api/locations/pending/${locationId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to reject location');
+      }
+
+      await fetchPendingLocations();
+      setMessage('Location rejected successfully!');
+    } catch (error) {
+      console.error('Error rejecting location:', error);
+      setError('Failed to reject location');
+    }
+  };
+
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
 
   return (
     <div className="p-8">
       {message && (
-        <div className="bg-green-100 text-green-700 p-4 rounded-lg mb-6 text-center">
+        <div className="p-4 mb-6 text-center text-green-700 bg-green-100 rounded-lg">
           {message}
         </div>
       )}
       {error && (
-        <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-6 text-center">
+        <div className="p-4 mb-6 text-center text-red-700 bg-red-100 rounded-lg">
           {error}
         </div>
       )}
-      <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
+      <h1 className="mb-6 text-2xl font-bold">Admin Dashboard</h1>
       
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-gray-600 text-sm mb-2">Total Users</h3>
+      <div className="grid grid-cols-1 gap-4 mb-8 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="p-6 bg-white rounded-lg shadow">
+          <h3 className="mb-2 text-sm text-gray-600">Total Users</h3>
           <p className="text-2xl font-bold">{stats.totalUsers}</p>
         </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-gray-600 text-sm mb-2">Total Locations</h3>
+        <div className="p-6 bg-white rounded-lg shadow">
+          <h3 className="mb-2 text-sm text-gray-600">Total Locations</h3>
           <p className="text-2xl font-bold">{stats.totalLocations}</p>
         </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-gray-600 text-sm mb-2">Total Guesses</h3>
+        <div className="p-6 bg-white rounded-lg shadow">
+          <h3 className="mb-2 text-sm text-gray-600">Total Guesses</h3>
           <p className="text-2xl font-bold">{stats.totalGuesses}</p>
         </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-gray-600 text-sm mb-2">Average Score</h3>
+        <div className="p-6 bg-white rounded-lg shadow">
+          <h3 className="mb-2 text-sm text-gray-600">Average Score</h3>
           <p className="text-2xl font-bold">{stats.averageScore.toFixed(2)}</p>
         </div>
       </div>
 
-      <section className="bg-white rounded-lg shadow p-6 mb-8">
-        <h2 className="text-xl font-bold mb-6">Manage Categories</h2>
+      <section className="p-6 mb-8 bg-white rounded-lg shadow">
+        <h2 className="mb-6 text-xl font-bold">Manage Categories</h2>
         <div className="space-y-6">
           <div className="max-w-md">
             <form onSubmit={handleCategorySubmit} className="space-y-4">
               <div>
-                <label htmlFor="categoryName" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="categoryName" className="block mb-1 text-sm font-medium text-gray-700">
                   New Category Name:
                 </label>
                 <input
@@ -429,7 +495,7 @@ function Admin() {
               </div>
               <button 
                 type="submit"
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+                className="w-full px-4 py-2 text-white transition-colors bg-blue-600 rounded-md hover:bg-blue-700"
               >
                 Add Category
               </button>
@@ -437,10 +503,10 @@ function Admin() {
           </div>
           
           <div>
-            <h3 className="text-lg font-semibold mb-4">Existing Categories</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <h3 className="mb-4 text-lg font-semibold">Existing Categories</h3>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
               {categories.map(category => (
-                <div key={category.id} className="bg-gray-50 p-3 rounded-md text-center">
+                <div key={category.id} className="p-3 text-center rounded-md bg-gray-50">
                   <span>{category.name}</span>
                 </div>
               ))}
@@ -449,13 +515,13 @@ function Admin() {
         </div>
       </section>
 
-      <section className="bg-white rounded-lg shadow p-6 mb-8">
-        <h2 className="text-xl font-bold mb-6">Manage Achievements</h2>
+      <section className="p-6 mb-8 bg-white rounded-lg shadow">
+        <h2 className="mb-6 text-xl font-bold">Manage Achievements</h2>
         <div className="space-y-6">
           <div className="max-w-md">
             <form onSubmit={handleAchievementSubmit} className="space-y-4">
               <div>
-                <label htmlFor="achievementName" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="achievementName" className="block mb-1 text-sm font-medium text-gray-700">
                   Name:
                 </label>
                 <input
@@ -468,7 +534,7 @@ function Admin() {
                 />
               </div>
               <div>
-                <label htmlFor="achievementDescription" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="achievementDescription" className="block mb-1 text-sm font-medium text-gray-700">
                   Description:
                 </label>
                 <textarea
@@ -480,7 +546,7 @@ function Admin() {
                 />
               </div>
               <div>
-                <label htmlFor="achievementCategory" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="achievementCategory" className="block mb-1 text-sm font-medium text-gray-700">
                   Category (optional):
                 </label>
                 <select
@@ -498,7 +564,7 @@ function Admin() {
                 </select>
               </div>
               <div>
-                <label htmlFor="achievementCountry" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="achievementCountry" className="block mb-1 text-sm font-medium text-gray-700">
                   Country (optional):
                 </label>
                 <input
@@ -510,7 +576,7 @@ function Admin() {
                 />
               </div>
               <div>
-                <label htmlFor="achievementPoints" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="achievementPoints" className="block mb-1 text-sm font-medium text-gray-700">
                   Points Required:
                 </label>
                 <input
@@ -526,7 +592,7 @@ function Admin() {
               </div>
               <button 
                 type="submit"
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+                className="w-full px-4 py-2 text-white transition-colors bg-blue-600 rounded-md hover:bg-blue-700"
               >
                 Add Achievement
               </button>
@@ -534,22 +600,22 @@ function Admin() {
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold mb-4">Achievement Tiers</h3>
+            <h3 className="mb-4 text-lg font-semibold">Achievement Tiers</h3>
             {Object.entries(achievementTiers).map(([tier, { name, range, color }]) => (
               <div key={tier} className="mb-4">
-                <h4 className="text-gray-600 text-sm mb-2">{name} ({range} points)</h4>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <h4 className="mb-2 text-sm text-gray-600">{name} ({range} points)</h4>
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
                   {achievements
                     .filter(a => getTierForPoints(a.points_required) === tier)
                     .map(achievement => (
-                      <div key={achievement.id} className="bg-gray-50 p-3 rounded-md text-center">
-                        <h5 className="text-gray-600 text-sm mb-2">{achievement.name}</h5>
-                        <p className="text-gray-500 text-sm">{achievement.description}</p>
-                        <p className="text-gray-500 text-sm">Points Required: {achievement.points_required}</p>
+                      <div key={achievement.id} className="p-3 text-center rounded-md bg-gray-50">
+                        <h5 className="mb-2 text-sm text-gray-600">{achievement.name}</h5>
+                        <p className="text-sm text-gray-500">{achievement.description}</p>
+                        <p className="text-sm text-gray-500">Points Required: {achievement.points_required}</p>
                         {achievement.category_id && (
-                          <p className="text-gray-500 text-sm">Category: {categories.find(c => c.id === achievement.category_id)?.name}</p>
+                          <p className="text-sm text-gray-500">Category: {categories.find(c => c.id === achievement.category_id)?.name}</p>
                         )}
-                        {achievement.country && <p className="text-gray-500 text-sm">Country: {achievement.country}</p>}
+                        {achievement.country && <p className="text-sm text-gray-500">Country: {achievement.country}</p>}
                       </div>
                     ))}
                 </div>
@@ -560,11 +626,11 @@ function Admin() {
       </section>
 
       <div className="admin-sections">
-        <section className="bg-white rounded-lg shadow p-6 mb-8">
-          <h2 className="text-xl font-bold mb-6">Add New Location</h2>
+        <section className="p-6 mb-8 bg-white rounded-lg shadow">
+          <h2 className="mb-6 text-xl font-bold">Add New Location</h2>
           <form onSubmit={handleLocationSubmit} className="space-y-4">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="name" className="block mb-1 text-sm font-medium text-gray-700">
                 Location Name:
               </label>
               <input
@@ -578,7 +644,7 @@ function Admin() {
               />
             </div>
             <div>
-              <label htmlFor="latitude" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="latitude" className="block mb-1 text-sm font-medium text-gray-700">
                 Latitude:
               </label>
               <input
@@ -593,7 +659,7 @@ function Admin() {
               />
             </div>
             <div>
-              <label htmlFor="longitude" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="longitude" className="block mb-1 text-sm font-medium text-gray-700">
                 Longitude:
               </label>
               <input
@@ -608,7 +674,7 @@ function Admin() {
               />
             </div>
             <div>
-              <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="category" className="block mb-1 text-sm font-medium text-gray-700">
                 Category:
               </label>
               <select
@@ -627,7 +693,7 @@ function Admin() {
               </select>
             </div>
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="description" className="block mb-1 text-sm font-medium text-gray-700">
                 Description:
               </label>
               <textarea
@@ -638,7 +704,7 @@ function Admin() {
               />
             </div>
             <div>
-              <label htmlFor="difficulty" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="difficulty" className="block mb-1 text-sm font-medium text-gray-700">
                 Difficulty Level:
               </label>
               <select
@@ -654,7 +720,7 @@ function Admin() {
               </select>
             </div>
             <div>
-              <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="country" className="block mb-1 text-sm font-medium text-gray-700">
                 Country:
               </label>
               <input
@@ -667,7 +733,7 @@ function Admin() {
               />
             </div>
             <div>
-              <label htmlFor="region" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="region" className="block mb-1 text-sm font-medium text-gray-700">
                 Region:
               </label>
               <input
@@ -680,7 +746,7 @@ function Admin() {
               />
             </div>
             <div>
-              <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="image" className="block mb-1 text-sm font-medium text-gray-700">
                 Image:
               </label>
               <input
@@ -700,15 +766,15 @@ function Admin() {
             </div>
             <button 
               type="submit"
-              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+              className="w-full px-4 py-2 text-white transition-colors bg-blue-600 rounded-md hover:bg-blue-700"
             >
               Add Location
             </button>
           </form>
         </section>
 
-        <section className="bg-white rounded-lg shadow p-6 mb-8">
-          <h2 className="text-xl font-bold mb-6">Existing Locations</h2>
+        <section className="p-6 mb-8 bg-white rounded-lg shadow">
+          <h2 className="mb-6 text-xl font-bold">Existing Locations</h2>
           <div className="space-y-4">
             {locations.map(location => (
               <div key={location.id} className="flex items-center justify-between">
@@ -716,17 +782,17 @@ function Admin() {
                   <img 
                     src={`http://localhost:8000/images/${location.image_url}`} 
                     alt="Location" 
-                    className="w-16 h-16 rounded-md object-cover"
+                    className="object-cover w-16 h-16 rounded-md"
                     onError={(e) => {
                       console.error('Image failed to load:', e.target.src);
                       e.target.src = 'https://via.placeholder.com/64'; // Fallback image
                     }}
                   />
                   <div>
-                    <p className="text-gray-600 text-sm">{location.name}</p>
-                    <p className="text-gray-500 text-sm">Lat: {location.latitude}</p>
-                    <p className="text-gray-500 text-sm">Long: {location.longitude}</p>
-                    <p className="text-gray-500 text-sm location-category">
+                    <p className="text-sm text-gray-600">{location.name}</p>
+                    <p className="text-sm text-gray-500">Lat: {location.latitude}</p>
+                    <p className="text-sm text-gray-500">Long: {location.longitude}</p>
+                    <p className="text-sm text-gray-500 location-category">
                       Category: {location.category_id}
                     </p>
                   </div>
@@ -773,15 +839,15 @@ function Admin() {
           </div>
         </section>
 
-        <section className="bg-white rounded-lg shadow p-6 mb-8">
-          <h2 className="text-xl font-bold mb-6">Users</h2>
+        <section className="p-6 mb-8 bg-white rounded-lg shadow">
+          <h2 className="mb-6 text-xl font-bold">Users</h2>
           <table className="w-full">
             <thead>
               <tr>
-                <th className="text-left text-sm font-medium text-gray-500 px-4 py-3">Username</th>
-                <th className="text-left text-sm font-medium text-gray-500 px-4 py-3">Email</th>
-                <th className="text-left text-sm font-medium text-gray-500 px-4 py-3">Total Score</th>
-                <th className="text-left text-sm font-medium text-gray-500 px-4 py-3">Join Date</th>
+                <th className="px-4 py-3 text-sm font-medium text-left text-gray-500">Username</th>
+                <th className="px-4 py-3 text-sm font-medium text-left text-gray-500">Email</th>
+                <th className="px-4 py-3 text-sm font-medium text-left text-gray-500">Total Score</th>
+                <th className="px-4 py-3 text-sm font-medium text-left text-gray-500">Join Date</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -796,6 +862,49 @@ function Admin() {
             </tbody>
           </table>
         </section>
+      </div>
+
+      {/* Pending Locations Section */}
+      <div className="mt-8">
+        <h2 className="mb-4 text-2xl font-bold">Pending Locations</h2>
+        {pendingLocations.length === 0 ? (
+          <p className="text-gray-500">No pending locations to review.</p>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {pendingLocations.map((location) => (
+              <div key={location.id} className="p-4 bg-white rounded-lg shadow-md">
+                <img
+                  src={`http://localhost:8000/${location.image_url}`}
+                  alt={location.name}
+                  className="object-cover w-full h-48 mb-4 rounded-md"
+                />
+                <h3 className="mb-2 text-lg font-semibold">{location.name}</h3>
+                <p className="mb-2 text-gray-600">{location.description}</p>
+                <div className="mb-4 text-sm text-gray-500">
+                  <p>Category: {categories.find(c => c.id === location.category_id)?.name}</p>
+                  <p>Difficulty: {location.difficulty_level}</p>
+                  <p>Country: {location.country}</p>
+                  <p>Region: {location.region}</p>
+                  <p>Submitted by: {users.find(u => u.id === location.user_id)?.username}</p>
+                </div>
+                <div className="flex justify-end space-x-2">
+                  <button
+                    onClick={() => handleRejectLocation(location.id)}
+                    className="px-3 py-1 text-white bg-red-500 rounded hover:bg-red-600"
+                  >
+                    Reject
+                  </button>
+                  <button
+                    onClick={() => handleApproveLocation(location.id)}
+                    className="px-3 py-1 text-white bg-green-500 rounded hover:bg-green-600"
+                  >
+                    Approve
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

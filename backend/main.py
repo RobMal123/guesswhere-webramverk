@@ -25,6 +25,8 @@ from urllib.parse import unquote
 from fastapi.responses import JSONResponse
 from email_utils import send_verification_email, send_password_reset_email
 import secrets
+from dependencies import get_db, get_current_user, get_current_admin_user
+import pending_locations
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -39,7 +41,7 @@ app = FastAPI()
 # Update the CORS middleware configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=["http://localhost:5173"],  # Your frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -63,6 +65,9 @@ IMAGES_DIR.mkdir(exist_ok=True)
 
 # Mount the images directory directly
 app.mount("/images", StaticFiles(directory="images"), name="images")
+
+# Include routers
+app.include_router(pending_locations.router)
 
 
 # Dependency
@@ -97,6 +102,21 @@ async def get_current_user(
         return None
     user = db.query(models.User).filter(models.User.username == username).first()
     return user
+
+
+async def get_current_admin_user(
+    current_user: models.User = Depends(get_current_user),
+) -> models.User:
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated"
+        )
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The user doesn't have enough privileges",
+        )
+    return current_user
 
 
 # Public endpoints (no authentication required)
@@ -1616,3 +1636,18 @@ async def reset_password(
     db.commit()
 
     return {"message": "Password has been reset successfully"}
+
+
+async def get_current_admin_user(
+    current_user: models.User = Depends(get_current_user),
+) -> models.User:
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated"
+        )
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The user doesn't have enough privileges",
+        )
+    return current_user

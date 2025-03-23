@@ -39,6 +39,28 @@ CREATE TABLE locations (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Pending locations table for user submissions
+CREATE TABLE pending_locations (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    image_url VARCHAR(255) NOT NULL,
+    latitude FLOAT NOT NULL CHECK (latitude BETWEEN -90 AND 90),
+    longitude FLOAT NOT NULL CHECK (longitude BETWEEN -180 AND 180),
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+    difficulty_level VARCHAR(20) NOT NULL DEFAULT 'medium', -- Added VARCHAR(20)
+    country VARCHAR(100),
+    region VARCHAR(100),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected'))
+);
+
+-- Index for pending locations
+CREATE INDEX idx_pending_locations_user ON pending_locations(user_id);
+CREATE INDEX idx_pending_locations_status ON pending_locations(status);
+
+
 -- Scores table with game_session_id column
 CREATE TABLE scores (
     id SERIAL PRIMARY KEY,
@@ -393,3 +415,6 @@ CREATE TRIGGER update_challenges_updated_at
     BEFORE UPDATE ON challenges
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
+-- Add connection pooling configuration
+ALTER DATABASE your_database SET max_connections = 100;

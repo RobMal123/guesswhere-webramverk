@@ -96,6 +96,39 @@ class Location(Base):
         return f"images/{self.image_url}"
 
 
+class PendingLocation(Base):
+    __tablename__ = "pending_locations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    image_url = Column(String(255), nullable=False)
+    latitude = Column(Float, nullable=False)
+    longitude = Column(Float, nullable=False)
+    name = Column(String(100), nullable=False)
+    description = Column(Text)
+    category_id = Column(Integer, ForeignKey("categories.id", ondelete="SET NULL"))
+    difficulty_level = Column(
+        SQLAlchemyEnum(DifficultyLevel), nullable=False, default=DifficultyLevel.MEDIUM
+    )
+    country = Column(String(100))
+    region = Column(String(100))
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    status = Column(
+        SQLAlchemyEnum(
+            "pending", "approved", "rejected", name="pending_location_status"
+        ),
+        default="pending",
+    )
+
+    # Relationships
+    user = relationship("User")
+    category = relationship("Category")
+
+    def get_full_image_url(self):
+        """Return the full image URL path."""
+        return f"images/{self.image_url}"
+
+
 class GameSession(Base):
     __tablename__ = "game_sessions"
 
@@ -260,3 +293,20 @@ class ChallengeScore(Base):
 
     # Unique constraint to ensure one score per user per location in a challenge
     __table_args__ = (UniqueConstraint("challenge_id", "user_id", "location_id"),)
+
+
+class GameResult(Base):
+    __tablename__ = "game_results"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    category = Column(String(50), nullable=False)
+    total_score = Column(Integer, nullable=False, default=0)
+    games_played = Column(Integer, nullable=False, default=0)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(
+        TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    # Relationship
+    user = relationship("User")
