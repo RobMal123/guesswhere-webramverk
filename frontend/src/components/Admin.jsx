@@ -439,123 +439,150 @@ function Admin() {
     }
   };
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
+  if (loading) return <div className="text-white">Loading...</div>;
+  if (error) return <div className="text-red-500">Error: {error}</div>;
 
   return (
-    <div className="p-8">
-      {message && (
-        <div className="p-4 mb-6 text-center text-green-700 bg-green-100 rounded-lg">
-          {message}
-        </div>
-      )}
-      {error && (
-        <div className="p-4 mb-6 text-center text-red-700 bg-red-100 rounded-lg">
-          {error}
-        </div>
-      )}
-      <h1 className="mb-6 text-2xl font-bold">Admin Dashboard</h1>
-      
-      <div className="grid grid-cols-1 gap-4 mb-8 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="p-6 bg-white rounded-lg shadow">
-          <h3 className="mb-2 text-sm text-gray-600">Total Users</h3>
-          <p className="text-2xl font-bold">{stats.totalUsers}</p>
-        </div>
-        <div className="p-6 bg-white rounded-lg shadow">
-          <h3 className="mb-2 text-sm text-gray-600">Total Locations</h3>
-          <p className="text-2xl font-bold">{stats.totalLocations}</p>
-        </div>
-        <div className="p-6 bg-white rounded-lg shadow">
-          <h3 className="mb-2 text-sm text-gray-600">Total Guesses</h3>
-          <p className="text-2xl font-bold">{stats.totalGuesses}</p>
-        </div>
-        <div className="p-6 bg-white rounded-lg shadow">
-          <h3 className="mb-2 text-sm text-gray-600">Average Score</h3>
-          <p className="text-2xl font-bold">{stats.averageScore.toFixed(2)}</p>
-        </div>
-      </div>
-
-      <section className="p-6 mb-8 bg-white rounded-lg shadow">
-        <h2 className="mb-6 text-xl font-bold">Manage Categories</h2>
-        <div className="space-y-6">
-          <div className="max-w-md">
-            <form onSubmit={handleCategorySubmit} className="space-y-4">
-              <div>
-                <label htmlFor="categoryName" className="block mb-1 text-sm font-medium text-gray-700">
-                  New Category Name:
-                </label>
-                <input
-                  id="categoryName"
-                  type="text"
-                  value={newCategory.name}
-                  onChange={(e) => setNewCategory({ name: e.target.value })}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <button 
-                type="submit"
-                className="w-full px-4 py-2 text-white transition-colors bg-blue-600 rounded-md hover:bg-blue-700"
-              >
-                Add Category
-              </button>
-            </form>
-          </div>
+    <div className="relative z-10">
+      <div className="w-full p-8 mx-auto max-w-7xl">
+        <div className="p-8 border shadow-lg backdrop-blur-sm bg-white/10 rounded-2xl border-white/20">
+          {message && (
+            <div className="p-4 mb-6 text-center text-green-200 border rounded-xl bg-green-500/10 border-green-500/20">
+              {message}
+            </div>
+          )}
+          {error && (
+            <div className="p-4 mb-6 text-center text-red-200 border rounded-xl bg-red-500/10 border-red-500/20">
+              {error}
+            </div>
+          )}
+          <h1 className="mb-6 text-3xl font-bold text-white">Admin Dashboard</h1>
           
-          <div>
-            <h3 className="mb-4 text-lg font-semibold">Existing Categories</h3>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-              {categories.map(category => (
-                <div key={category.id} className="p-3 text-center rounded-md bg-gray-50">
-                  <span>{category.name}</span>
-                </div>
-              ))}
+          {/* Statistics Grid */}
+          <div className="grid grid-cols-1 gap-4 mb-8 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="p-6 border rounded-xl bg-white/10 border-white/20">
+              <h3 className="mb-2 text-sm text-white/90">Total Users</h3>
+              <p className="text-2xl font-bold text-white">{stats.totalUsers}</p>
+            </div>
+            <div className="p-6 border rounded-xl bg-white/10 border-white/20">
+              <h3 className="mb-2 text-sm text-white/90">Total Locations</h3>
+              <p className="text-2xl font-bold text-white">{stats.totalLocations}</p>
+            </div>
+            <div className="p-6 border rounded-xl bg-white/10 border-white/20">
+              <h3 className="mb-2 text-sm text-white/90">Total Guesses</h3>
+              <p className="text-2xl font-bold text-white">{stats.totalGuesses}</p>
+            </div>
+            <div className="p-6 border rounded-xl bg-white/10 border-white/20">
+              <h3 className="mb-2 text-sm text-white/90">Average Score</h3>
+              <p className="text-2xl font-bold text-white">{stats.averageScore.toFixed(2)}</p>
             </div>
           </div>
-        </div>
-      </section>
 
-      <section className="p-6 mb-8 bg-white rounded-lg shadow">
-        <h2 className="mb-6 text-xl font-bold">Manage Achievements</h2>
-        <div className="space-y-6">
-          <div className="max-w-md">
-            <form onSubmit={handleAchievementSubmit} className="space-y-4">
+          {/* Pending Locations Section */}
+          <section className="mb-8">
+            <h2 className="mb-6 text-2xl font-bold text-white">Pending Locations</h2>
+            {pendingLocations.length === 0 ? (
+              <p className="text-white/70">No pending locations to review.</p>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {pendingLocations.map((location) => (
+                  <div key={location.id} className="p-4 border rounded-xl bg-white/10 border-white/20">
+                    <img
+                      src={`http://localhost:8000/${location.image_url}`}
+                      alt={location.name}
+                      className="object-cover w-full h-48 mb-4 rounded-xl"
+                    />
+                    <h3 className="mb-2 text-lg font-semibold text-white">{location.name}</h3>
+                    <p className="mb-2 text-white/70">{location.description}</p>
+                    <div className="mb-4 text-sm text-white/70">
+                      <p>Category: {categories.find(c => c.id === location.category_id)?.name}</p>
+                      <p>Difficulty: {location.difficulty_level}</p>
+                      <p>Country: {location.country}</p>
+                      <p>Region: {location.region}</p>
+                      <p>Submitted by: {users.find(u => u.id === location.user_id)?.username}</p>
+                    </div>
+                    <div className="flex justify-end space-x-2">
+                      <button
+                        onClick={() => handleRejectLocation(location.id)}
+                        className="px-4 py-2 text-white transition-all duration-300 border rounded-xl bg-red-500/80 border-red-500/20 hover:bg-red-500/90"
+                      >
+                        Reject
+                      </button>
+                      <button
+                        onClick={() => handleApproveLocation(location.id)}
+                        className="px-4 py-2 text-white transition-all duration-300 border rounded-xl bg-green-500/80 border-green-500/20 hover:bg-green-500/90"
+                      >
+                        Approve
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Add New Location Section */}
+          <section className="p-6 mb-8 border rounded-xl bg-white/10 border-white/20">
+            <h2 className="mb-6 text-2xl font-bold text-white">Add New Location</h2>
+            <form onSubmit={handleLocationSubmit} className="space-y-6">
               <div>
-                <label htmlFor="achievementName" className="block mb-1 text-sm font-medium text-gray-700">
-                  Name:
+                <label htmlFor="name" className="block mb-2 text-sm font-medium text-white/90">
+                  Location Name
                 </label>
                 <input
-                  id="achievementName"
+                  id="name"
                   type="text"
-                  value={newAchievement.name}
-                  onChange={(e) => setNewAchievement({...newAchievement, name: e.target.value})}
+                  placeholder="Location Name"
+                  value={newLocation.name}
+                  onChange={(e) => setNewLocation({...newLocation, name: e.target.value})}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 text-white border rounded-xl bg-white/10 border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent placeholder-white/50"
                 />
               </div>
-              <div>
-                <label htmlFor="achievementDescription" className="block mb-1 text-sm font-medium text-gray-700">
-                  Description:
-                </label>
-                <textarea
-                  id="achievementDescription"
-                  value={newAchievement.description}
-                  onChange={(e) => setNewAchievement({...newAchievement, description: e.target.value})}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="latitude" className="block mb-2 text-sm font-medium text-white/90">
+                    Latitude
+                  </label>
+                  <input
+                    id="latitude"
+                    type="number"
+                    step="any"
+                    placeholder="Latitude"
+                    value={newLocation.latitude}
+                    onChange={(e) => setNewLocation({...newLocation, latitude: e.target.value})}
+                    required
+                    className="w-full px-4 py-2 text-white border rounded-xl bg-white/10 border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent placeholder-white/50"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="longitude" className="block mb-2 text-sm font-medium text-white/90">
+                    Longitude
+                  </label>
+                  <input
+                    id="longitude"
+                    type="number"
+                    step="any"
+                    placeholder="Longitude"
+                    value={newLocation.longitude}
+                    onChange={(e) => setNewLocation({...newLocation, longitude: e.target.value})}
+                    required
+                    className="w-full px-4 py-2 text-white border rounded-xl bg-white/10 border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent placeholder-white/50"
+                  />
+                </div>
               </div>
               <div>
-                <label htmlFor="achievementCategory" className="block mb-1 text-sm font-medium text-gray-700">
-                  Category (optional):
+                <label htmlFor="category" className="block mb-2 text-sm font-medium text-white/90">
+                  Category
                 </label>
                 <select
-                  id="achievementCategory"
-                  value={newAchievement.category_id}
-                  onChange={(e) => setNewAchievement({...newAchievement, category_id: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  id="category"
+                  value={newLocation.category_id}
+                  onChange={(e) => setNewLocation({...newLocation, category_id: e.target.value})}
+                  required
+                  className="w-full px-4 py-2 text-white border rounded-xl bg-white/10 border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent"
                 >
-                  <option value="">No specific category</option>
+                  <option value="">Select a category</option>
                   {categories.map(category => (
                     <option key={category.id} value={category.id}>
                       {category.name}
@@ -564,347 +591,157 @@ function Admin() {
                 </select>
               </div>
               <div>
-                <label htmlFor="achievementCountry" className="block mb-1 text-sm font-medium text-gray-700">
-                  Country (optional):
+                <label htmlFor="description" className="block mb-2 text-sm font-medium text-white/90">
+                  Description
                 </label>
-                <input
-                  id="achievementCountry"
-                  type="text"
-                  value={newAchievement.country}
-                  onChange={(e) => setNewAchievement({...newAchievement, country: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                <textarea
+                  id="description"
+                  value={newLocation.description}
+                  onChange={(e) => setNewLocation({...newLocation, description: e.target.value})}
+                  className="w-full px-4 py-2 text-white border rounded-xl bg-white/10 border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent placeholder-white/50"
+                  rows="3"
                 />
               </div>
               <div>
-                <label htmlFor="achievementPoints" className="block mb-1 text-sm font-medium text-gray-700">
-                  Points Required:
+                <label htmlFor="difficulty" className="block mb-2 text-sm font-medium text-white/90">
+                  Difficulty Level
+                </label>
+                <select
+                  id="difficulty"
+                  value={newLocation.difficulty_level}
+                  onChange={(e) => setNewLocation({...newLocation, difficulty_level: e.target.value})}
+                  required
+                  className="w-full px-4 py-2 text-white border rounded-xl bg-white/10 border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent"
+                >
+                  <option value="easy">Easy</option>
+                  <option value="medium">Medium</option>
+                  <option value="hard">Hard</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="country" className="block mb-2 text-sm font-medium text-white/90">
+                  Country
                 </label>
                 <input
-                  id="achievementPoints"
-                  type="number"
-                  min="0"
-                  max="5000"
-                  value={newAchievement.points_required}
-                  onChange={(e) => setNewAchievement({...newAchievement, points_required: e.target.value})}
+                  id="country"
+                  type="text"
+                  value={newLocation.country}
+                  onChange={(e) => setNewLocation({...newLocation, country: e.target.value})}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 text-white border rounded-xl bg-white/10 border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent placeholder-white/50"
                 />
               </div>
-              <button 
-                type="submit"
-                className="w-full px-4 py-2 text-white transition-colors bg-blue-600 rounded-md hover:bg-blue-700"
-              >
-                Add Achievement
-              </button>
+              <div>
+                <label htmlFor="region" className="block mb-2 text-sm font-medium text-white/90">
+                  Region
+                </label>
+                <input
+                  id="region"
+                  type="text"
+                  value={newLocation.region}
+                  onChange={(e) => setNewLocation({...newLocation, region: e.target.value})}
+                  required
+                  className="w-full px-4 py-2 text-white border rounded-xl bg-white/10 border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent placeholder-white/50"
+                />
+              </div>
+              <div>
+                <label htmlFor="image" className="block mb-2 text-sm font-medium text-white/90">
+                  Image
+                </label>
+                <input
+                  id="image"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      console.log('Selected file:', file.name);
+                      setNewLocation({...newLocation, image: file});
+                    }
+                  }}
+                  required
+                  className="w-full px-4 py-2 text-white border rounded-xl bg-white/10 border-white/20 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-500/20 file:text-white hover:file:bg-blue-500/30"
+                />
+              </div>
+              <div className="flex justify-end pt-4 space-x-4">
+                <button
+                  type="submit"
+                  className="px-6 py-2 text-white transition-all duration-300 border rounded-xl bg-blue-500/80 border-blue-500/20 hover:bg-blue-500/90"
+                >
+                  Add Location
+                </button>
+              </div>
             </form>
-          </div>
+          </section>
 
-          <div>
-            <h3 className="mb-4 text-lg font-semibold">Achievement Tiers</h3>
-            {Object.entries(achievementTiers).map(([tier, { name, range, color }]) => (
-              <div key={tier} className="mb-4">
-                <h4 className="mb-2 text-sm text-gray-600">{name} ({range} points)</h4>
-                <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-                  {achievements
-                    .filter(a => getTierForPoints(a.points_required) === tier)
-                    .map(achievement => (
-                      <div key={achievement.id} className="p-3 text-center rounded-md bg-gray-50">
-                        <h5 className="mb-2 text-sm text-gray-600">{achievement.name}</h5>
-                        <p className="text-sm text-gray-500">{achievement.description}</p>
-                        <p className="text-sm text-gray-500">Points Required: {achievement.points_required}</p>
-                        {achievement.category_id && (
-                          <p className="text-sm text-gray-500">Category: {categories.find(c => c.id === achievement.category_id)?.name}</p>
-                        )}
-                        {achievement.country && <p className="text-sm text-gray-500">Country: {achievement.country}</p>}
-                      </div>
-                    ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <div className="admin-sections">
-        <section className="p-6 mb-8 bg-white rounded-lg shadow">
-          <h2 className="mb-6 text-xl font-bold">Add New Location</h2>
-          <form onSubmit={handleLocationSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="name" className="block mb-1 text-sm font-medium text-gray-700">
-                Location Name:
-              </label>
-              <input
-                id="name"
-                type="text"
-                placeholder="Location Name"
-                value={newLocation.name}
-                onChange={(e) => setNewLocation({...newLocation, name: e.target.value})}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label htmlFor="latitude" className="block mb-1 text-sm font-medium text-gray-700">
-                Latitude:
-              </label>
-              <input
-                id="latitude"
-                type="number"
-                step="any"
-                placeholder="Latitude"
-                value={newLocation.latitude}
-                onChange={(e) => setNewLocation({...newLocation, latitude: e.target.value})}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label htmlFor="longitude" className="block mb-1 text-sm font-medium text-gray-700">
-                Longitude:
-              </label>
-              <input
-                id="longitude"
-                type="number"
-                step="any"
-                placeholder="Longitude"
-                value={newLocation.longitude}
-                onChange={(e) => setNewLocation({...newLocation, longitude: e.target.value})}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label htmlFor="category" className="block mb-1 text-sm font-medium text-gray-700">
-                Category:
-              </label>
-              <select
-                id="category"
-                value={newLocation.category_id}
-                onChange={(e) => setNewLocation({...newLocation, category_id: e.target.value})}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select a category</option>
-                {categories.map(category => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="description" className="block mb-1 text-sm font-medium text-gray-700">
-                Description:
-              </label>
-              <textarea
-                id="description"
-                value={newLocation.description}
-                onChange={(e) => setNewLocation({...newLocation, description: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label htmlFor="difficulty" className="block mb-1 text-sm font-medium text-gray-700">
-                Difficulty Level:
-              </label>
-              <select
-                id="difficulty"
-                value={newLocation.difficulty_level}
-                onChange={(e) => setNewLocation({...newLocation, difficulty_level: e.target.value})}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="easy">Easy</option>
-                <option value="medium">Medium</option>
-                <option value="hard">Hard</option>
-              </select>
-            </div>
-            <div>
-              <label htmlFor="country" className="block mb-1 text-sm font-medium text-gray-700">
-                Country:
-              </label>
-              <input
-                id="country"
-                type="text"
-                value={newLocation.country}
-                onChange={(e) => setNewLocation({...newLocation, country: e.target.value})}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label htmlFor="region" className="block mb-1 text-sm font-medium text-gray-700">
-                Region:
-              </label>
-              <input
-                id="region"
-                type="text"
-                value={newLocation.region}
-                onChange={(e) => setNewLocation({...newLocation, region: e.target.value})}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label htmlFor="image" className="block mb-1 text-sm font-medium text-gray-700">
-                Image:
-              </label>
-              <input
-                id="image"
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    console.log('Selected file:', file.name);
-                    setNewLocation({...newLocation, image: file});
-                  }
-                }}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <button 
-              type="submit"
-              className="w-full px-4 py-2 text-white transition-colors bg-blue-600 rounded-md hover:bg-blue-700"
-            >
-              Add Location
-            </button>
-          </form>
-        </section>
-
-        <section className="p-6 mb-8 bg-white rounded-lg shadow">
-          <h2 className="mb-6 text-xl font-bold">Existing Locations</h2>
-          <div className="space-y-4">
-            {locations.map(location => (
-              <div key={location.id} className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <img 
-                    src={`http://localhost:8000/images/${location.image_url}`} 
-                    alt="Location" 
-                    className="object-cover w-16 h-16 rounded-md"
-                    onError={(e) => {
-                      console.error('Image failed to load:', e.target.src);
-                      e.target.src = 'https://via.placeholder.com/64'; // Fallback image
-                    }}
-                  />
+          {/* Rest of the sections with updated styling */}
+          <section className="p-6 mb-8 border rounded-xl bg-white/10 border-white/20">
+            <h2 className="mb-6 text-2xl font-bold text-white">Manage Categories</h2>
+            <div className="space-y-6">
+              <div className="max-w-md">
+                <form onSubmit={handleCategorySubmit} className="space-y-4">
                   <div>
-                    <p className="text-sm text-gray-600">{location.name}</p>
-                    <p className="text-sm text-gray-500">Lat: {location.latitude}</p>
-                    <p className="text-sm text-gray-500">Long: {location.longitude}</p>
-                    <p className="text-sm text-gray-500 location-category">
-                      Category: {location.category_id}
-                    </p>
+                    <label htmlFor="categoryName" className="block mb-2 text-sm font-medium text-white/90">
+                      New Category Name
+                    </label>
+                    <input
+                      id="categoryName"
+                      type="text"
+                      value={newCategory.name}
+                      onChange={(e) => setNewCategory({ name: e.target.value })}
+                      required
+                      className="w-full px-4 py-2 text-white border rounded-xl bg-white/10 border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent placeholder-white/50"
+                    />
                   </div>
-                </div>
-                <div className="flex items-center space-x-4">
-                  {editingLocation?.id === location.id ? (
-                    <>
-                      <button 
-                        type="button"
-                        onClick={handleCancelEdit}
-                        className="text-gray-500 hover:text-gray-700"
-                      >
-                        Cancel
-                      </button>
-                      <button 
-                        type="submit"
-                        form="edit-location-form"
-                        className="text-blue-500 hover:text-blue-700"
-                      >
-                        Save
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button 
-                        type="button"
-                        onClick={() => handleEditClick(location)}
-                        className="text-gray-500 hover:text-gray-700"
-                      >
-                        Edit
-                      </button>
-                      <button 
-                        type="button"
-                        onClick={() => handleDeleteLocation(location.id)}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        Delete
-                      </button>
-                    </>
-                  )}
+                  <button 
+                    type="submit"
+                    className="w-full px-6 py-2 text-white transition-all duration-300 border rounded-xl bg-blue-500/80 border-blue-500/20 hover:bg-blue-500/90"
+                  >
+                    Add Category
+                  </button>
+                </form>
+              </div>
+              
+              <div>
+                <h3 className="mb-4 text-lg font-semibold text-white">Existing Categories</h3>
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+                  {categories.map(category => (
+                    <div key={category.id} className="p-3 text-center text-white border rounded-xl bg-white/10 border-white/20">
+                      <span>{category.name}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
-          </div>
-        </section>
+            </div>
+          </section>
 
-        <section className="p-6 mb-8 bg-white rounded-lg shadow">
-          <h2 className="mb-6 text-xl font-bold">Users</h2>
-          <table className="w-full">
-            <thead>
-              <tr>
-                <th className="px-4 py-3 text-sm font-medium text-left text-gray-500">Username</th>
-                <th className="px-4 py-3 text-sm font-medium text-left text-gray-500">Email</th>
-                <th className="px-4 py-3 text-sm font-medium text-left text-gray-500">Total Score</th>
-                <th className="px-4 py-3 text-sm font-medium text-left text-gray-500">Join Date</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {users.map(user => (
-                <tr key={user.id}>
-                  <td className="px-4 py-4 text-sm text-gray-800">{user.username}</td>
-                  <td className="px-4 py-4 text-sm text-gray-800">{user.email}</td>
-                  <td className="px-4 py-4 text-sm text-gray-800">{user.total_score}</td>
-                  <td className="px-4 py-4 text-sm text-gray-800">{new Date(user.created_at).toLocaleDateString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      </div>
-
-      {/* Pending Locations Section */}
-      <div className="mt-8">
-        <h2 className="mb-4 text-2xl font-bold">Pending Locations</h2>
-        {pendingLocations.length === 0 ? (
-          <p className="text-gray-500">No pending locations to review.</p>
-        ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {pendingLocations.map((location) => (
-              <div key={location.id} className="p-4 bg-white rounded-lg shadow-md">
-                <img
-                  src={`http://localhost:8000/${location.image_url}`}
-                  alt={location.name}
-                  className="object-cover w-full h-48 mb-4 rounded-md"
-                />
-                <h3 className="mb-2 text-lg font-semibold">{location.name}</h3>
-                <p className="mb-2 text-gray-600">{location.description}</p>
-                <div className="mb-4 text-sm text-gray-500">
-                  <p>Category: {categories.find(c => c.id === location.category_id)?.name}</p>
-                  <p>Difficulty: {location.difficulty_level}</p>
-                  <p>Country: {location.country}</p>
-                  <p>Region: {location.region}</p>
-                  <p>Submitted by: {users.find(u => u.id === location.user_id)?.username}</p>
-                </div>
-                <div className="flex justify-end space-x-2">
-                  <button
-                    onClick={() => handleRejectLocation(location.id)}
-                    className="px-3 py-1 text-white bg-red-500 rounded hover:bg-red-600"
-                  >
-                    Reject
-                  </button>
-                  <button
-                    onClick={() => handleApproveLocation(location.id)}
-                    className="px-3 py-1 text-white bg-green-500 rounded hover:bg-green-600"
-                  >
-                    Approve
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+          {/* Users Section */}
+          <section className="p-6 mb-8 border rounded-xl bg-white/10 border-white/20">
+            <h2 className="mb-6 text-2xl font-bold text-white">Users</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-white/20">
+                    <th className="px-4 py-3 text-sm font-medium text-left text-white/90">Username</th>
+                    <th className="px-4 py-3 text-sm font-medium text-left text-white/90">Email</th>
+                    <th className="px-4 py-3 text-sm font-medium text-left text-white/90">Total Score</th>
+                    <th className="px-4 py-3 text-sm font-medium text-left text-white/90">Join Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/20">
+                  {users.map(user => (
+                    <tr key={user.id}>
+                      <td className="px-4 py-4 text-sm text-white/90">{user.username}</td>
+                      <td className="px-4 py-4 text-sm text-white/90">{user.email}</td>
+                      <td className="px-4 py-4 text-sm text-white/90">{user.total_score}</td>
+                      <td className="px-4 py-4 text-sm text-white/90">{new Date(user.created_at).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
       </div>
     </div>
   );

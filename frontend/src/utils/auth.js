@@ -1,10 +1,9 @@
 // Authentication utility functions
 
 // Store tokens in localStorage
-export const storeTokens = (accessToken, refreshToken, csrfToken, userId, isAdmin) => {
+export const storeTokens = (accessToken, refreshToken, userId, isAdmin) => {
     localStorage.setItem('access_token', accessToken);
     localStorage.setItem('refresh_token', refreshToken);
-    localStorage.setItem('csrf_token', csrfToken);
     localStorage.setItem('userId', userId);
     localStorage.setItem('isAdmin', isAdmin);
 };
@@ -13,7 +12,6 @@ export const storeTokens = (accessToken, refreshToken, csrfToken, userId, isAdmi
 export const removeTokens = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
-    localStorage.removeItem('csrf_token');
     localStorage.removeItem('userId');
     localStorage.removeItem('isAdmin');
 };
@@ -22,33 +20,11 @@ export const removeTokens = () => {
 export const getTokens = () => {
     const accessToken = localStorage.getItem('access_token');
     const refreshToken = localStorage.getItem('refresh_token');
-    const csrfTokenData = localStorage.getItem('csrf_token');
     const userId = localStorage.getItem('userId');
-
-    let csrfToken = null;
-    if (csrfTokenData) {
-        try {
-            // Try to parse as JSON first
-            const parsedData = JSON.parse(csrfTokenData);
-            if (parsedData.token && parsedData.expiresAt) {
-                // Check if token is expired
-                if (Date.now() < parsedData.expiresAt) {
-                    csrfToken = parsedData.token;
-                } else {
-                    // Remove expired token
-                    localStorage.removeItem('csrf_token');
-                }
-            }
-        } catch (error) {
-            // If parsing fails, assume it's a plain string token
-            csrfToken = csrfTokenData;
-        }
-    }
 
     return {
         accessToken,
         refreshToken,
-        csrfToken,
         userId
     };
 };
@@ -91,40 +67,7 @@ export const refreshAccessToken = async () => {
     }
 };
 
-// Get new CSRF token
-export const getNewCsrfToken = async () => {
-    const { accessToken } = getTokens();
-    
-    if (!accessToken) {
-        throw new Error('Not authenticated');
-    }
-    
-    try {
-        const response = await fetch('http://localhost:8000/csrf-token', {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error('Failed to get CSRF token');
-        }
-        
-        const data = await response.json();
-        // Store token with expiration time
-        const tokenData = {
-            token: data.csrf_token,
-            expiresAt: Date.now() + (60 * 60 * 1000) // 1 hour from now
-        };
-        localStorage.setItem('csrf_token', JSON.stringify(tokenData));
-        return data.csrf_token;
-    } catch (error) {
-        console.error('Failed to get CSRF token:', error);
-        throw error;
-    }
-};
-
-// API request wrapper with automatic token refresh and CSRF handling
+// API request wrapper with automatic token refresh
 export const apiRequest = async (url, options = {}) => {
     options = {
         ...options,
