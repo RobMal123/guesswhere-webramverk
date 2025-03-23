@@ -144,7 +144,7 @@ function Quiz({ category, onGameComplete }) {
         throw new Error('Unfortunately, there are no more locations available for this category.');
       }
       
-      console.log('Location data:', data);
+      // console.log('Location data:', data); // Removed logging
       setUsedLocationIds(prev => [...prev, data.id]);
       setCurrentImage(data.image_url);
       setCorrectLocation([data.latitude, data.longitude]);

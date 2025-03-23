@@ -84,22 +84,14 @@ function Map({ onGuessSubmit, showResult, correctLocation, guessedLocation, loca
     lng: correctLocation[1]
   } : correctLocation;
 
-  // Add debug logging
-  console.log('Map props:', {
-    correctLocation,
-    formattedLocation,
-    locationId,
-    showResult
-  });
-
   // Validate props
   if (!formattedLocation?.lat || !formattedLocation?.lng || !locationId) {
     console.error('Missing required props:', { correctLocation: formattedLocation, locationId });
-    return <div className="text-red-600 p-4">Missing required location data</div>;
+    return <div className="p-4 text-red-600">Missing required location data</div>;
   }
 
   return (
-    <div className="w-full h-full rounded-lg overflow-hidden shadow-md relative z-0">
+    <div className="relative z-0 w-full h-full overflow-hidden rounded-lg shadow-md">
       <MapContainer
         center={[20, 0]}
         zoom={2}
