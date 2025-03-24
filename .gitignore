@@ -50,11 +50,7 @@ yarn-error.log*
 *.sqlite3
 *.db
 
-# Media files
-/backend/images/*
-!/backend/images/.gitkeep
 
-/images/*
 
 # Logs
 *.log
