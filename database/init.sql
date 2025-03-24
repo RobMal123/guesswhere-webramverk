@@ -60,6 +60,13 @@ CREATE TABLE pending_locations (
 CREATE INDEX idx_pending_locations_user ON pending_locations(user_id);
 CREATE INDEX idx_pending_locations_status ON pending_locations(status);
 
+-- Game sessions table to track individual game attempts
+CREATE TABLE game_sessions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    ended_at TIMESTAMP WITH TIME ZONE
+);
 
 -- Scores table with game_session_id column
 CREATE TABLE scores (
@@ -73,12 +80,14 @@ CREATE TABLE scores (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Game sessions table to track individual game attempts
-CREATE TABLE game_sessions (
+-- Create leaderboard table
+CREATE TABLE leaderboard (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    ended_at TIMESTAMP WITH TIME ZONE
+    total_score INTEGER NOT NULL DEFAULT 0,
+    total_games INTEGER NOT NULL DEFAULT 0,
+    average_score FLOAT NOT NULL DEFAULT 0,
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create new category_leaderboard table
@@ -472,4 +481,4 @@ CREATE TRIGGER update_challenges_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 
 -- Add connection pooling configuration
-ALTER DATABASE your_database SET max_connections = 100;
+ALTER DATABASE geo_quizdb SET max_connections = 100;
