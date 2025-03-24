@@ -481,4 +481,4 @@ CREATE TRIGGER update_challenges_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 
 -- Add connection pooling configuration
-ALTER DATABASE geo_quizdb SET max_connections = 100;
+ALTER DATABASE guesswhere SET max_connections = 100;
