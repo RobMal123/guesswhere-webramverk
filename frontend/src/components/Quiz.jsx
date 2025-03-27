@@ -246,103 +246,106 @@ function Quiz({ category, onGameComplete }) {
 
   return (
     <div className="relative z-10 w-full p-8 mx-auto max-w-7xl">
-      {/* Header Section */}
-      <div className="flex items-center justify-between mb-8">
-        <h2 className="text-3xl font-bold text-white">
-          Round {roundNumber} of {TOTAL_ROUNDS}
-        </h2>
-        <div className="text-xl font-semibold text-white">
-          Total Score: {totalScore}
+      {/* Header Section - Update with better styling */}
+      <div className="w-full p-8 border shadow-lg backdrop-blur-sm bg-white/10 rounded-2xl border-white/20">
+        {/* Header Section */}
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-3xl font-bold text-white">
+            Round {roundNumber} of {TOTAL_ROUNDS}
+          </h2>
+          <div className="text-xl font-semibold text-white">
+            Total Score: {totalScore}
+          </div>
         </div>
-      </div>
 
-      {/* Toggle Buttons */}
-      <div className="flex gap-4 mb-6">
-        <button
-          onClick={() => setShowMap(false)}
-          className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-300 transform
-            ${!showMap 
-              ? 'bg-white/20 text-white shadow-lg scale-[1.02] backdrop-blur-sm border border-white/20' 
-              : 'bg-white/10 text-white/80 hover:bg-white/20 backdrop-blur-sm border border-white/10'}`}
-        >
-          View Image
-        </button>
-        <button
-          onClick={() => setShowMap(true)}
-          className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-300 transform
-            ${showMap 
-              ? 'bg-white/20 text-white shadow-lg scale-[1.02] backdrop-blur-sm border border-white/20' 
-              : 'bg-white/10 text-white/80 hover:bg-white/20 backdrop-blur-sm border border-white/10'}`}
-        >
-          View Map
-        </button>
-      </div>
+        {/* Toggle Buttons */}
+        <div className="flex gap-4 mb-6">
+          <button
+            onClick={() => setShowMap(false)}
+            className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-300 transform
+              ${!showMap 
+                ? 'bg-white/20 text-white shadow-lg scale-[1.02] backdrop-blur-sm border border-white/20' 
+                : 'bg-white/10 text-white/80 hover:bg-white/20 backdrop-blur-sm border border-white/10'}`}
+          >
+            View Image
+          </button>
+          <button
+            onClick={() => setShowMap(true)}
+            className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-300 transform
+              ${showMap 
+                ? 'bg-white/20 text-white shadow-lg scale-[1.02] backdrop-blur-sm border border-white/20' 
+                : 'bg-white/10 text-white/80 hover:bg-white/20 backdrop-blur-sm border border-white/10'}`}
+          >
+            View Map
+          </button>
+        </div>
 
-      {/* Main Content Container */}
-      <div className="relative w-full h-[600px] rounded-2xl overflow-hidden shadow-xl 
-                    backdrop-blur-sm bg-white/10 border border-white/20">
-        {currentImage && (
+        {/* Main Content Container */}
+        <div className="relative w-full h-[600px] rounded-2xl overflow-hidden shadow-xl 
+                      backdrop-blur-sm bg-white/10 border border-white/20">
+          {currentImage && (
+            <div className={`absolute inset-0 transition-opacity duration-300 
+                          ${showMap ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+              <img 
+                src={`http://localhost:8000/${currentImage}`} 
+                alt="Guess this location" 
+                className={`w-full h-full ${imageViewMode === 'cover' ? 'object-cover' : 'object-contain'}`}
+                onError={(e) => {
+                  console.error('Image failed to load:', e.target.src);
+                  setError('Failed to load image');
+                }}
+              />
+              {/* Image View Mode Toggle Button */}
+              {!showMap && (
+                <button
+                  onClick={() => setImageViewMode(prev => prev === 'cover' ? 'contain' : 'cover')}
+                  className="absolute flex items-center justify-center w-8 h-8 transition-all duration-200 border rounded-lg bottom-4 right-4 bg-black/20 hover:bg-black/40 text-white/90 backdrop-blur-sm border-white/20"
+                  title={imageViewMode === 'cover' ? 'Show full image' : 'Fill frame'}
+                >
+                  <span className="text-base drop-shadow-lg">
+                    {imageViewMode === 'cover' ? '🔍' : '🖼️'}
+                  </span>
+                </button>
+              )}
+            </div>
+          )}
+          
           <div className={`absolute inset-0 transition-opacity duration-300 
-                        ${showMap ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-            <img 
-              src={`http://localhost:8000/${currentImage}`} 
-              alt="Guess this location" 
-              className={`w-full h-full ${imageViewMode === 'cover' ? 'object-cover' : 'object-contain'}`}
-              onError={(e) => {
-                console.error('Image failed to load:', e.target.src);
-                setError('Failed to load image');
-              }}
+                        ${!showMap ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+            <Map
+              onGuessSubmit={handleGuessSubmit}
+              showResult={showResult}
+              correctLocation={correctLocation}
+              guessedLocation={guessedLocation}
+              locationId={locationId}
             />
-            {/* Image View Mode Toggle Button */}
-            {!showMap && (
-              <button
-                onClick={() => setImageViewMode(prev => prev === 'cover' ? 'contain' : 'cover')}
-                className="absolute flex items-center justify-center w-8 h-8 transition-all duration-200 border rounded-lg bottom-4 right-4 bg-black/20 hover:bg-black/40 text-white/90 backdrop-blur-sm border-white/20"
-                title={imageViewMode === 'cover' ? 'Show full image' : 'Fill frame'}
+          </div>
+        </div>
+        
+        {/* Results Section */}
+        {showResult && (
+          <div className="p-6 mt-8 text-white border rounded-xl backdrop-blur-sm bg-white/10 border-white/20">
+            <div className="space-y-4 text-center">
+              <h2 className="text-2xl font-bold">
+                Round Score: {score} points
+              </h2>
+              <p className="text-lg text-white/80">
+                You were {Math.round(distance)} km away from {locationName}!
+              </p>
+              <button 
+                onClick={handleNextRound}
+                className="px-8 py-3 bg-white/10 hover:bg-white/20 
+                         text-white rounded-xl shadow-lg
+                         transform hover:scale-[1.02] transition-all duration-300
+                         backdrop-blur-sm border border-white/20
+                         max-w-xs mx-auto"
               >
-                <span className="text-base drop-shadow-lg">
-                  {imageViewMode === 'cover' ? '🔍' : '🖼️'}
-                </span>
+                {roundNumber >= TOTAL_ROUNDS ? 'Finish Game' : 'Next Location'}
               </button>
-            )}
+            </div>
           </div>
         )}
-        
-        <div className={`absolute inset-0 transition-opacity duration-300 
-                      ${!showMap ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-          <Map
-            onGuessSubmit={handleGuessSubmit}
-            showResult={showResult}
-            correctLocation={correctLocation}
-            guessedLocation={guessedLocation}
-            locationId={locationId}
-          />
-        </div>
       </div>
-      
-      {/* Results Section */}
-      {showResult && (
-        <div className="p-6 mt-8 text-white border rounded-2xl backdrop-blur-sm bg-white/10 border-white/20">
-          <div className="space-y-4 text-center">
-            <h2 className="text-2xl font-bold">
-              Round Score: {score} points
-            </h2>
-            <p className="text-lg text-white/80">
-              You were {Math.round(distance)} km away from {locationName}!
-            </p>
-            <button 
-              onClick={handleNextRound}
-              className="px-8 py-3 bg-white/10 hover:bg-white/20 
-                       text-white rounded-xl shadow-lg
-                       transform hover:scale-[1.02] transition-all duration-300
-                       backdrop-blur-sm border border-white/20
-                       max-w-xs mx-auto"
-            >
-              {roundNumber >= TOTAL_ROUNDS ? 'Finish Game' : 'Next Location'}
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Achievement Notification */}
       {showAchievement && currentAchievement && (

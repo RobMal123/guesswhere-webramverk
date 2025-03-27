@@ -741,6 +741,50 @@ function Admin() {
               </table>
             </div>
           </section>
+
+          {/* Locations Section */}
+          <section className="p-6 mb-8 border rounded-xl bg-white/10 border-white/20">
+            <h2 className="mb-6 text-2xl font-bold text-white">Locations</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-white/20">
+                    <th className="px-4 py-3 text-sm font-medium text-left text-white/90">Name</th>
+                    <th className="px-4 py-3 text-sm font-medium text-left text-white/90">Category</th>
+                    <th className="px-4 py-3 text-sm font-medium text-left text-white/90">Country</th>
+                    <th className="px-4 py-3 text-sm font-medium text-left text-white/90">Difficulty</th>
+                    <th className="px-4 py-3 text-sm font-medium text-left text-white/90">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/20">
+                  {locations.map(location => (
+                    <tr key={location.id}>
+                      <td className="px-4 py-4 text-sm text-white/90">{location.name}</td>
+                      <td className="px-4 py-4 text-sm text-white/90">
+                        {categories.find(c => c.id === location.category_id)?.name || 'Unknown'}
+                      </td>
+                      <td className="px-4 py-4 text-sm text-white/90">{location.country}</td>
+                      <td className="px-4 py-4 text-sm text-white/90">{location.difficulty_level}</td>
+                      <td className="px-4 py-4 text-sm text-white/90">
+                        <button
+                          onClick={() => handleEditClick(location)}
+                          className="px-3 py-1 mr-2 text-xs text-white transition-all duration-300 border rounded-lg bg-blue-500/80 border-blue-500/20 hover:bg-blue-500/90"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteLocation(location.id)}
+                          className="px-3 py-1 text-xs text-white transition-all duration-300 border rounded-lg bg-red-500/80 border-red-500/20 hover:bg-red-500/90"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
         </div>
       </div>
     </div>
